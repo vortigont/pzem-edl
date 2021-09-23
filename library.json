@@ -28,11 +28,46 @@
     "export": {
         "include":
         [
-            "src/*",
             "examples/*",
+            "src/*",
+            "CHANGELOG.md",
             "README.md",
             "library.json",
-            "library.properties"
+            "library.properties",
+            "LICENCE"
         ]
-    }
+    },
+    "examples": [
+        {
+            "name": "Single PZEM",
+            "base": "examples/01_SinglePZEM",
+            "files": [
+                "platformio.ini",
+                "src/main.h",
+                "src/main.cpp",
+                "src/src.ino"
+            ]
+        },
+        {
+            "name": "Multiple PZEM",
+            "base": "examples/02_MultiplePZEM",
+            "files": [
+                "platformio.ini",
+                "src/main.h",
+                "src/main.cpp",
+                "src/src.ino"
+            ]
+        },
+        {
+            "name": "PZEM CLI",
+            "base": "examples/pzem_cli",
+            "files": [
+                "platformio.ini",
+                "README.md",
+                "src/main.h",
+                "src/main.cpp",
+                "src/src.ino"
+            ]
+        }
+    ]
 }

@@ -1,7 +1,7 @@
 PZEM-EDL - PZEM event-driven library
 ======
 
-__[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md)__
+__[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md) | [DOCS](/README.md)__
 
 
 This is an ESP32/Arduino framework library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0** Energy monitor modules via MODBUS proto.
@@ -80,3 +80,5 @@ Library code is available under [GNU General Public License v3.0](LICENSE)
 [zbx-sadman / zabbuino](https://github.com/zbx-sadman/zabbuino) - A Zabbix agent firmware for Arduino supporting PZEM meters
 
 [PZEM on TASMOTA](https://tasmota.github.io/docs/PZEM-0XX/) - Tasmota has it's own embeded support for PZEM
+
+[PZEM-017-v1](https://github.com/maxzerker/PZEM-017-v1) - lib for the DC version PZEM-017-v1
