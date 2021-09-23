@@ -1,0 +1,4 @@
+ - pzem_cli - added 'energy reset', 'alarm get/set' features
+ - examples for Sigle/Multiple PZEMs
+ - pzem_cli example
+ - initial version

@@ -20,6 +20,19 @@ Feel free to open a discussion topic on any questions.
  * event/callback API for user-code hooks
  * Class objects for managing single device/port instance
  * or Pool of multiple PZEM devices groupped on single/multiple Serial port(s)
+ * [pzem_cli](/examples/pzem_cli) - a small sketch to interact with pzem via terminal cli
+
+### TODO list
+ * Collector module
+    * collecting series of metrics data
+    * circular buffers
+    * PSRAM support
+    * time series
+ * Export module
+    * JSON
+    * binary
+    * csv
+ * PZEM017 support
 
 ### Limitations
  * ESP32 platform only
@@ -57,8 +70,13 @@ Library code is available under [GNU General Public License v3.0](LICENSE)
 
 ### Links
 [PZEM-004Tv3.0 datasheet](/docs/PZEM-004T-V3.0-Datasheet-User-Manual.pdf) - User manual, datasheet and MODBUS commands specs
+
 [olehs](https://github.com/olehs/PZEM004T) - This is were it all started. An arduino lib for the legacy version of PZEM004t device
+
 [mandulaj](https://github.com/mandulaj/PZEM-004T-v30) - Jakub's version of the library for newer PZEM-004T-v3.0 devices supporting MODBUS proto
+
 [TheHWcave](https://github.com/TheHWcave/Peacefair-PZEM-004T-) - reverse-engineered schematics and interface software (python)
+
 [zbx-sadman / zabbuino](https://github.com/zbx-sadman/zabbuino) - A Zabbix agent firmware for Arduino supporting PZEM meters
+
 [PZEM on TASMOTA](https://tasmota.github.io/docs/PZEM-0XX/) - Tasmota has it's own embeded support for PZEM
