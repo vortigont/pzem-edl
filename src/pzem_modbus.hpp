@@ -33,6 +33,9 @@ namespace pzmbus {
 // RW 16-bit registers
 #define WREG_ALARM_THR          0x0001  // Alarm threshold, 1LSB correspond to 1W
 #define WREG_ADDR               0x0002  // MODBUS Slave address register   (The range is 0x0001~0x00F7)
+#define WREG_BEGIN              WREG_ALARM_THR
+#define WREG_LEN                2
+
 
 // Commands
 #define CMD_RHR                 0x03    // Read Holding Register    (Read RW regs)
@@ -83,7 +86,7 @@ enum class pzemcmd_t:uint8_t {
     RIR = CMD_RIR,
     WSR = CMD_WSR,
     calibrate = CMD_CAL,
-    RESET_ENERGY = CMD_RST_ENRG,
+    reset_energy = CMD_RST_ENRG,
     read_err = CMD_RERR,
     write_err = CMD_WERR,
     calibrate_err = CMD_CALERR,
@@ -256,11 +259,9 @@ struct pzem_state {
                 }
             }
             case pzemcmd_t::RHR : {
-                if(m->rawdata[2] == WREG_ALARM_THR){        // alarm threshold
-                    alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);           // from the 4th byte data follows
-                } else if (m->rawdata[2] == WREG_ADDR){     // it's a modbus addr
-                    addr = (uint8_t)__builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
-                    break;
+                if (m->rawdata[2] == WREG_LEN * 2){ // we got full len RHR data
+                    alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
+                    addr = m->rawdata[6];
                 }
                 // unknown regs
                 break;
@@ -275,6 +276,9 @@ struct pzem_state {
                 }
                 break;
             }
+            case pzemcmd_t::reset_energy :
+                data.energy=0;                      // nothing to do, except reset conter
+                break;
             case pzemcmd_t::read_err :
             case pzemcmd_t::write_err :
             case pzemcmd_t::reset_err :
@@ -316,6 +320,17 @@ TX_msg* create_msg(pzemcmd_t cmd, uint16_t reg_addr, uint16_t value, uint8_t sla
 TX_msg* cmd_get_metrics(uint8_t addr = ADDR_ANY);
 
 /**
+ * @brief message request to get RHR values
+ * there two regs - 'slave modbus addr' and 'alarm threshold', this will read both.
+ * It is not possible to distinguish reply packets for one reg from another if reading only one reg
+ * so we will read both and parse data output for required one
+ * 
+ * @param addr 
+ * @return TX_msg* 
+ */
+TX_msg* cmd_get_rhrs(const uint8_t addr = ADDR_ANY);
+
+/**
  * @brief  message request to change slave device modbus address
  * 
  * @param addr - new modbus address
@@ -348,7 +363,6 @@ TX_msg* cmd_set_alarm_thr(uint16_t w, const uint8_t addr = ADDR_ANY);
  * @return TX_msg* 
  */
 TX_msg* cmd_get_alarm_thr(const uint8_t addr = ADDR_ANY);
-
 
 /**
  * @brief create MSG - reset PZEM's Energy counter to zero

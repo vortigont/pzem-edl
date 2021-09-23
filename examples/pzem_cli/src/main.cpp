@@ -70,22 +70,39 @@ void menu(){
     Serial.println("PZEM modbus address setter (be sure to connect only ONE pzem at a time)");
     Serial.println();
     Serial.println("Enter command:");
-    Serial.println("1 - run broadcast 'What's your modbus addr?' command");
-    Serial.println("2 - Change device MODBUS address");
+    Serial.println("1 - Get slave MODBUS address");
+    Serial.println("2 - Set slave MODBUS address");
     Serial.println("3 - Poll for metrics data");
+    Serial.println("4 - Reset energy counter");
+    Serial.println("5 - Get power alarm threshold");
+    Serial.println("6 - Set power alarm threshold");
     Serial.println();
 
     while (Serial.available() == 0); // this is just good-old blocking loop method :)
     int cmd = Serial.parseInt();
 
-    if (cmd ==1)
-        get_addr_bcast();           // check address call
-
-    if (cmd ==2)
-        set_mbus_addr();            // set address call
-
-    if (cmd ==3)
-        get_metrics();            // set address call
+    switch(cmd){
+        case 1 :
+            get_addr_bcast();           // check address call
+            break;
+        case 2 :
+            set_mbus_addr();            // set address call
+            break;
+        case 3 :
+            get_metrics();
+            break;
+        case 4 :
+            reset_nrg();
+            break;
+        case 5 :
+            get_alrm_thr();
+            break;
+        case 6 :
+            set_alrm_thr();
+            break;
+        default:
+            break;
+    }
 
 }
 
@@ -121,6 +138,39 @@ void get_metrics(){
     qport->txenqueue(m);
     delay(500);                             // let the reply to be printed before returning to menu (prevent terminal garbage)
 }
+
+void reset_nrg(){
+    TX_msg* m = cmd_energy_reset();         // create message 'reset energy' with catch-all destination address
+    qport->txenqueue(m);                    // send message to queue
+    delay(500);                             // let the reply to be printed before returning to menu (prevent terminal garbage)
+}
+
+void get_alrm_thr(){
+    TX_msg* m = cmd_get_alarm_thr();         // create message 'reset energy' with catch-all destination address
+    qport->txenqueue(m);                    // send message to queue
+    delay(500);                             // let the reply to be printed before returning to menu (prevent terminal garbage)
+}
+
+void set_alrm_thr(){
+    Serial.println("Enter new power alarm threshold value in range 1-50000 watt");
+    while (Serial.available() == 0);        // this is just good-old blocking loop method :)
+    int val = Serial.parseInt();
+
+    Serial.printf("Please confirm that you want to set new value to '%d'\n", val);
+    Serial.println("1 - to 'YES', 0 - to cancel");
+
+    while (Serial.available() == 0);
+    int v = Serial.parseInt();
+
+    if (1 == v){
+        TX_msg* m = cmd_set_alarm_thr(val);       // create message 'set MODBUS addr' and send it to the catch-all destination address
+                                                    // this will effecively forces any PZEM device to change it's slave device address to the specified value 
+
+        qport->txenqueue(m);
+        delay(500);                         // let the reply to be printed before returning to menu (prevent terminal garbage)
+    }
+}
+
 
 /**
  * @brief this is our call-back routine

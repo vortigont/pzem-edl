@@ -44,17 +44,17 @@ TX_msg* cmd_set_modbus_addr(uint8_t new_addr, const uint8_t current_addr){
     return create_msg(pzemcmd_t::WSR, WREG_ADDR, new_addr, current_addr);
 }
 
-TX_msg* cmd_get_modbus_addr(const uint8_t addr){
-    return create_msg(pzemcmd_t::RHR, WREG_ADDR, 0x1, addr);
-}
+TX_msg* cmd_get_rhrs(const uint8_t addr){
+    return create_msg(pzemcmd_t::RHR, WREG_BEGIN, WREG_LEN, addr);
+};
+
+TX_msg* cmd_get_modbus_addr(const uint8_t addr){ return cmd_get_rhrs(addr); }
+
+TX_msg* cmd_get_alarm_thr(const uint8_t addr){ return cmd_get_rhrs(addr); }
 
 TX_msg* cmd_set_alarm_thr(uint16_t w, const uint8_t addr){
 
     return create_msg(pzemcmd_t::WSR, WREG_ALARM_THR, w, addr);
-}
-
-TX_msg* cmd_get_alarm_thr(uint8_t addr){
-    return create_msg(pzemcmd_t::RHR, WREG_ALARM_THR, 0x1, addr);
 }
 
 TX_msg* cmd_energy_reset(const uint8_t addr){
@@ -179,15 +179,23 @@ void rx_msg_prettyp(const RX_msg *m){
             break;
         }
         case pzemcmd_t::RHR : {
-            if (m->rawdata[2] == WREG_ADDR){
-                printf("Configured device MODBUS address:\t%d\n", pz.addr);
-            } else if (m->rawdata[2] == WREG_ALARM_THR){
-                printf("Configured Alarm threshold:\t%d\n", pz.alrm_thrsh);
+            printf("Configured MODBUS address:\t%d\n", pz.addr);
+            printf("Configured Alarm threshold:\t%d\n", pz.alrm_thrsh);
+            break;
+        }
+        case pzemcmd_t::WSR : {
+            if (m->rawdata[3] == WREG_ADDR){
+                printf("Device MODBUS address changed to:\t%d\n", pz.addr);
+            } else if (m->rawdata[3] == WREG_ALARM_THR){
+                printf("Alarm threshold value changed to:\t%d\n", pz.alrm_thrsh);
             } else {
-                printf("Unknown RHR value\n");
+                printf("Unknown WSR value\n");
             }
             break;
         }
+        case pzemcmd_t::reset_energy :
+            printf("Energy counter reset!\n");
+            break;
         default:
             printf("Other data (to be done)...\n");
             // To be DONE....
