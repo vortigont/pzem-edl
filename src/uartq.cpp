@@ -22,6 +22,14 @@ UartQ::~UartQ(){
     rx_callback = nullptr;
 }
 
+void UartQ::init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx){
+    // TODO: catch port init errors
+    uart_param_config(port, &uartcfg);
+    uart_set_pin(port, gpio_tx, gpio_rx, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_driver_install(port, RX_BUF_SIZE, TX_BUF_SIZE, rx_evt_queue_DEPTH, &rx_evt_queue, 0);
+    rts_sem = xSemaphoreCreateBinary();     // Ready-To-Send-next semaphore
+}
+
 
 void UartQ::stopQueues(){
     stop_TX_msg_queue();

@@ -58,7 +58,8 @@ UART2 	GPIO 16 	GPIO 17 	GPIO 7 	    GPIO 8
 
 /**
  * @brief PZEM UART port instance configuration structure
- * used to spawn new PZPort instances
+ * used to spawn new PZPort instances for MODBUS devices
+ * other than PZEMv30
  */
 struct PZPort_cfg {
     uart_port_t p;
@@ -66,9 +67,17 @@ struct PZPort_cfg {
     int gpio_tx;
     uint8_t id;
     std::unique_ptr<char[]> descr;
+    uart_config_t uartcfg;              // could be used to change uart properties for other modbus devices
 
     PZPort_cfg (uart_port_t _p=PZEM_UART, int _rx=UART_PIN_NO_CHANGE, int _tx=UART_PIN_NO_CHANGE, uint8_t _id = 0, const char *_name=nullptr) :
         p(_p), gpio_rx(_rx), gpio_tx(_tx), id(_id) {
+            uartcfg = {     // default values for PZEMv30
+                .baud_rate = PZEM_BAUD_RATE,
+                .data_bits = UART_DATA_8_BITS,
+                .parity = UART_PARITY_DISABLE,
+                .stop_bits = UART_STOP_BITS_1,
+                .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+            };
             if (!_name || !*_name){
                 descr = std::unique_ptr<char[]>(new char[9]);
                 sprintf(descr.get(), "Port-%d", _id);
@@ -95,7 +104,11 @@ struct PZPort_cfg {
 class UartQ {
     typedef std::function<void (pzmbus::RX_msg*)> datahandler_t;
 
+    void init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx);
+
 public:
+    UartQ(const uart_port_t p, const uart_config_t cfg, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){ init(cfg, gpio_rx, gpio_tx); }
+
     UartQ(const uart_port_t p, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){
         uart_config_t uartcfg = {
             .baud_rate = PZEM_BAUD_RATE,
@@ -105,11 +118,7 @@ public:
             .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
         };
 
-        // TODO: catch port init errors
-        uart_param_config(port, &uartcfg);
-        uart_set_pin(port, gpio_tx, gpio_rx, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-        uart_driver_install(port, RX_BUF_SIZE, TX_BUF_SIZE, rx_evt_queue_DEPTH, &rx_evt_queue, 0);
-        rts_sem = xSemaphoreCreateBinary();     // Ready-To-Send-next semaphore
+        init(uartcfg, gpio_rx, gpio_tx);
     }
 
     // Class dtor
@@ -367,7 +376,7 @@ public:
     bool active(bool newstate);
 
     PZPort (PZPort_cfg &cfg) :
-        UartQ(cfg.p, cfg.gpio_rx, cfg.gpio_tx), id(cfg.id) {
+        UartQ(cfg.p, cfg.uartcfg, cfg.gpio_rx, cfg.gpio_tx), id(cfg.id) {
             descr = std::move(cfg.descr);
             qrun = startQueues();
     }
