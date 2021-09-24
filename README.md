@@ -4,7 +4,7 @@ PZEM-EDL - PZEM event-driven library
 __[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md) | [DOCS](/docs/README.md)__
 
 
-This is an ESP32/Arduino framework library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0** Energy monitor modules via MODBUS proto.
+This is an ESP32/Arduino framework library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0**/**PZEM-003** Energy monitor modules via MODBUS proto.
 
 **_currently lib is in it's early develompent state, so expect bugs, issues and sporadic API changes any time_**
 
@@ -24,8 +24,9 @@ Feel free to open a discussion topic on any questions.
 
 
 ### Supported modules
- - PZEM-004Tv3.0
- - PZEM-014/PZEM-016
+ - PZEM-004Tv3.0 (same as PZEM-014/PZEM-016) AC 20/100 Amps meter
+ - PZEM-003 (same as PZEM-017) DC 10/50/100/200/300 Amps meter (not tested)
+
 
 ### Limitations
  * ESP32 platform only

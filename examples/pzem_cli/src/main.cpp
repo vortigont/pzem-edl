@@ -67,7 +67,7 @@ void menu(){
 
     Serial.println();
     Serial.println("==========================");
-    Serial.println("PZEM modbus address setter (be sure to connect only ONE pzem at a time)");
+    Serial.println("PZEM004 modbus address setter (be sure to connect only ONE pzem at a time)");
     Serial.println();
     Serial.println("Enter command:");
     Serial.println("1 - Get slave MODBUS address");

@@ -13,13 +13,14 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "main.h"
 // #include "pzem_edl.hpp"
 
+// replace pz004 vs pz003 to work with PZEM003 device
 using namespace pz004;     // we will need this namespace
 
 /*
-    This is a small sketch that shows how to run a single PZEM instance:
+    This is a small sketch that shows how to run a single PZEM004 instance:
     
      - create an event-driven UART Queue object
-     - create PZEM instance
+     - create PZ004 instance
      - attach UART Queue to the PZEM instance
      - mannualy poll for data
      - enable auto-polling
@@ -43,12 +44,12 @@ using namespace pz004;     // we will need this namespace
 UartQ *qport;
 
 // Also we need a placeholder for PZEM object
-PZEM *pz;
+PZ004 *pz;
 
 void setup(){
     Serial.begin(115200);       // just an ordinary Serial console to interact with
 
-    Serial.printf("\n\n\n\tPZEM single instance example\n\n");
+    Serial.printf("\n\n\n\tPZEM004 single instance example\n\n");
 
 
     // Create a new PortQ object using default UART pins for the port specified
@@ -58,7 +59,7 @@ void setup(){
     qport = new UartQ(PZEM_UART_PORT, RX_PIN, TX_PIN);      // or use custom pins
 
     // Now let's create a PZEM object
-    pz = new PZEM(PZEM_ID);
+    pz = new PZ004(PZEM_ID);
 
     // and link our port with PZEM object
     pz->attachUartQ(qport);

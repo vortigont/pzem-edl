@@ -62,27 +62,10 @@ void PZEM::detachUartQ(){
     sink_lock = false;
 }
 
-void PZEM::rx_sink(const RX_msg *msg){
-    if (pz.parse_rx_mgs(msg)){          // update meter state with new packet data (if valid)
-        if (rx_callback)
-            rx_callback(id, msg);       // run external call-back function
-    }
-};
-
 void PZEM::attach_rx_callback(rx_callback_t f){
     if (!f)
         return;
     rx_callback = std::move(f);
-}
-
-void PZEM::updateMetrics(){
-    if (!q)
-        return;
-
-    TX_msg* cmd = cmd_get_metrics(pz.addr);
-
-    pz.reset_poll_us();
-    q->txenqueue(cmd);
 }
 
 bool PZEM::autopoll(){
@@ -132,6 +115,44 @@ bool PZEM::set_pollrate(size_t t){
 return false;
 }
 
+
+
+// ****  PZEM004 Implementation  **** //
+void PZ004::updateMetrics(){
+    if (!q)
+        return;
+
+    TX_msg* cmd = pz004::cmd_get_metrics(pz.addr);
+
+    pz.reset_poll_us();
+    q->txenqueue(cmd);
+}
+
+void PZ004::rx_sink(const RX_msg *msg){
+    if (pz.parse_rx_mgs(msg)){          // update meter state with new packet data (if valid)
+        if (rx_callback)
+            rx_callback(id, msg);       // run external call-back function
+    }
+};
+
+
+// ****  PZEM003 Implementation  **** //
+void PZ003::updateMetrics(){
+    if (!q)
+        return;
+
+    TX_msg* cmd = pz003::cmd_get_metrics(pz.addr);
+
+    pz.reset_poll_us();
+    q->txenqueue(cmd);
+}
+
+void PZ003::rx_sink(const RX_msg *msg){
+    if (pz.parse_rx_mgs(msg)){          // update meter state with new packet data (if valid)
+        if (rx_callback)
+            rx_callback(id, msg);       // run external call-back function
+    }
+};
 
 
 
@@ -188,7 +209,7 @@ bool PZPool::addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbu
     auto node = std::make_shared<PZNode>();
     node->port = p;
 
-    auto pz = std::unique_ptr<PZEM>(new PZEM(pzem_id, modbus_addr, descr));     // create new PZEM object
+    auto pz = std::unique_ptr<PZ004>(new PZ004(pzem_id, modbus_addr, descr));     // create new PZEM object
     pz->attachUartQ(node->port.get(), true);                                    // attach it to the specified PortQ (TX-only!)
 
     node->pzem = std::move(pz);
@@ -197,7 +218,7 @@ bool PZPool::addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbu
 };
 
 // TODO: возвращать код ошибки
-bool PZPool::addPZEM(const uint8_t port_id, PZEM *pz){
+bool PZPool::addPZEM(const uint8_t port_id, PZ004 *pz){
 
     // reject objects with catch-all or invalid address
     if (pz->getaddr() < ADDR_MIN || pz->getaddr() > ADDR_MAX)
@@ -275,7 +296,7 @@ std::shared_ptr<PZPort> PZPool::port_by_id(uint8_t id){
 }
 
 // todo: дописать итераторы для класса LList
-PZEM* PZPool::pzem_by_id(uint8_t id){
+PZ004* PZPool::pzem_by_id(uint8_t id){
    for (int i = 0; i != meters.size(); ++i) {
         if (meters[i]->pzem->id == id)
             return meters[i]->pzem.get();

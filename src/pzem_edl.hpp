@@ -27,9 +27,12 @@ typedef std::function<void (uint8_t id, const RX_msg*)> rx_callback_t;
  */
 class PZEM {
     std::unique_ptr<char[]> descr;      // Mnemonic name for the instance
-    pz004::pzem_state pz;              // structure with PZEM state
-    UartQ *q = nullptr;                 // UartQ sink for TX messages
     bool sink_lock = false;             // flag marking rx_sink as an active call-back when attached
+
+protected:
+    UartQ *q = nullptr;                 // UartQ sink for TX messages
+    rx_callback_t rx_callback = nullptr;          // external callback to trigger on RX data
+
 
 public:
     const uint8_t id;                   // device unique ID
@@ -37,8 +40,8 @@ public:
     /**
      * Class constructor
      */
-    PZEM(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) : id(_id) {
-        pz.addr = modbus_addr;
+    PZEM(const uint8_t _id, const char *_descr=nullptr) : id(_id) {
+        //pz.addr = modbus_addr;
         if (!_descr || !*_descr){
             descr.reset(new char[9]);   // i.e. PZEM-123
             sprintf(descr.get(), "PZEM-%d", id);
@@ -57,7 +60,7 @@ public:
      * @brief return configured MODBUS address
      * 
      */
-    inline uint8_t getaddr(){ return pz.addr; }
+    virtual uint8_t getaddr(){ return ADDR_ANY; }
 
     /**
      * @brief attach to UartQ object which provides queues for message exchange
@@ -71,18 +74,18 @@ public:
     void attachUartQ(UartQ *qport, bool tx_only = false);
 
     /**
-     * @brief detach IO queues
-     * this is mandatory on destruct if RX callback has been set
-     */
-    void detachUartQ();
-
-    /**
      * @brief A sink for RX messages
      * should be set as a callback for UartQ or fed with messages in any other way
      * 
      * @param msg 
      */
-    void rx_sink(const RX_msg *msg);
+    virtual void rx_sink(const RX_msg *msg){};
+
+    /**
+     * @brief detach IO queues
+     * this is mandatory on destruct if RX callback has been set
+     */
+    void detachUartQ();
 
     /**
      * @brief external callback function
@@ -100,23 +103,9 @@ public:
     /**
      * @brief poll PZEM for metrics
      * on call a mesage with metrics request is send to PZEM device
+     * should be overriden in a derived class
      */
-    void updateMetrics();
-
-    /**
-     * @brief Get the PZEM State object reference
-     * it contains all parameters and metrics for PZEM device
-     * 
-     * @return const pzmbus::pzem_state& 
-     */
-    const pz004::pzem_state &getState() const { return pz; }
-
-    /**
-     * @brief Get the PZEM Metrics object
-     * it contains all electric metrics for PZEM device
-     * @return const pzmbus::metrics&
-     */
-    const pz004::metrics &getMetrics() const { return pz.data; }
+    virtual void updateMetrics(){};
 
     /**
      * @brief return description string as 'const char*'
@@ -165,8 +154,6 @@ private:
     TimerHandle_t t_poller=nullptr;
     size_t poll_period = POLLER_PERIOD;           // auto poll period in ms
 
-    rx_callback_t rx_callback = nullptr;          // external callback to trigger on RX data
-
     static void timerRunner(TimerHandle_t xTimer){
         if (!xTimer) return;
 
@@ -177,10 +164,124 @@ private:
 };
 
 
+
+/**
+ * @brief PZEM004v3.0 device class (same as PZEM-014/PZEM-016)
+ *
+ */
+class PZ004 : public PZEM {
+    pz004::pzem_state pz;              // structure with PZEM004 state
+
+public:
+    // Derrived constructor
+    PZ004(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) :
+        PZEM(_id, _descr) {
+        pz.addr = modbus_addr;
+    }
+    virtual ~PZ004(){};
+
+    // Copy semantics : not (yet) implemented
+    PZ004(const PZ004&) = delete;
+    PZ004& operator=(const PZ004&) = delete;
+
+    /**
+     * @brief return configured MODBUS address
+     * 
+     */
+    uint8_t getaddr() override { return pz.addr; }
+
+    /**
+     * @brief poll PZEM for metrics
+     * on call a mesage with metrics request is send to PZEM device
+     */
+    void updateMetrics() override;
+
+    /**
+     * @brief Get the PZEM State object reference
+     * it contains all parameters and metrics for PZEM device
+     * 
+     * @return const pzmbus::pzem_state& 
+     */
+    const pz004::pzem_state &getState() const { return pz; }
+
+    /**
+     * @brief Get the PZEM Metrics object
+     * it contains all electric metrics for PZEM device
+     * @return const pzmbus::metrics&
+     */
+    const pz004::metrics &getMetrics() const { return pz.data; }
+
+    /**
+     * @brief A sink for RX messages
+     * should be set as a callback for UartQ or fed with messages in any other way
+     * 
+     * @param msg 
+     */
+    void rx_sink(const RX_msg *msg) override;
+
+};
+
+
+/**
+ * @brief PZEM003 device class (same as PZEM-017)
+ *
+ */
+class PZ003 : public PZEM {
+    pz003::pzem_state pz;              // structure with PZEM004 state
+
+public:
+    // Derrived constructor
+    PZ003(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) :
+        PZEM(_id, _descr) {
+        pz.addr = modbus_addr;
+    }
+    virtual ~PZ003(){};
+
+    // Copy semantics : not (yet) implemented
+    PZ003(const PZ003&) = delete;
+    PZ003& operator=(const PZ003&) = delete;
+
+    /**
+     * @brief return configured MODBUS address
+     * 
+     */
+    uint8_t getaddr() override { return pz.addr; }
+
+    /**
+     * @brief poll PZEM for metrics
+     * on call a mesage with metrics request is send to PZEM device
+     */
+    void updateMetrics() override;
+
+    /**
+     * @brief Get the PZEM State object reference
+     * it contains all parameters and metrics for PZEM device
+     * 
+     * @return const pzmbus::pzem_state& 
+     */
+    const pz003::pzem_state &getState() const { return pz; }
+
+    /**
+     * @brief Get the PZEM Metrics object
+     * it contains all electric metrics for PZEM device
+     * @return const pzmbus::metrics&
+     */
+    const pz003::metrics &getMetrics() const { return pz.data; }
+
+    /**
+     * @brief A sink for RX messages
+     * should be set as a callback for UartQ or fed with messages in any other way
+     * 
+     * @param msg 
+     */
+    void rx_sink(const RX_msg *msg) override;
+
+};
+
 /**
  * @brief a pool object that incorporates PZEM devices, UART ports and it's mapping
  * 
- * 
+ * only PZEM004's are supported as pool members (so far)
  */
 class PZPool {
 
@@ -190,7 +291,7 @@ class PZPool {
      */
     struct PZNode {
         std::shared_ptr<PZPort> port;
-        std::unique_ptr<PZEM> pzem;
+        std::unique_ptr<PZ004> pzem;
     };
 
 protected:
@@ -198,7 +299,7 @@ protected:
     LList<std::shared_ptr<PZNode>> meters;                          // list of registered PZEM nodes
     std::shared_ptr<PZPort> port_by_id(uint8_t id);
     //const std::shared_ptr<PZPort> port_by_id(uint8_t id) const;     // const overload
-    PZEM* pzem_by_id(uint8_t id);
+    PZ004* pzem_by_id(uint8_t id);
 
 
 public:
@@ -240,7 +341,7 @@ public:
      * @return false  - on any error
      */
     bool addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, const char *descr=nullptr);
-    bool addPZEM(const uint8_t port_id, PZEM *pz);
+    bool addPZEM(const uint8_t port_id, PZ004 *pz);
 
     /**
      * @brief check if the port with spefied id exist in a pool
