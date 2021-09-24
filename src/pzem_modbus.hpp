@@ -12,8 +12,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 #pragma once
 #include <Arduino.h>
-
-namespace pzmbus {
+#include "uartq.hpp"
 
 // Read-Only 16-bit registers
 #define REG_VOLTAGE             0x0000  // 1LSB correspond to 0.1 V
@@ -77,10 +76,8 @@ namespace pzmbus {
 
 // ESP32 is little endian here
 
-// Enumeration of available energy metrics
-enum class meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm };
+namespace pzmbus {
 
-// Enumeration of available MODBUS commands
 enum class pzemcmd_t:uint8_t {
     RHR = CMD_RHR,
     RIR = CMD_RIR,
@@ -103,39 +100,45 @@ enum class pzem_err_t:uint8_t {
     err_parse                   // error parsing reply
 };
 
-// Check MODBUS CRC16 over provided data vector
-bool checkcrc16(const uint8_t *buf, uint16_t len);
-
 /**
- * @brief Structure with crafted PZEM message command data
- * ment to be sent to the PZEM device
- */
-struct TX_msg {
-    const size_t len;       // msg size
-    uint8_t* data;          // data pointer
-    bool w4rx;              // 'wait for reply' - a reply for message expected, should block TX queue handler
-
-    TX_msg(const size_t size = GENERIC_MSG_SIZE, bool rxreq = true) : len(size), w4rx(rxreq) {
-        data = (uint8_t*)calloc(len, sizeof(uint8_t));
-        //memcpy(data, srcdata, len);
-    }
-    ~TX_msg(){ delete[] data; }
-};
-
-/**
- * @brief struct with PZEM reply message
+ * @brief Create a msg object with PZEM command wrapped into proper MODBUS message
+ * this is a genereic command template
  * 
+ * @param cmd - PZEM command
+ * @param reg_addr - register address
+ * @param value - command value
+ * @param slave_addr - slave device modbus address
+ * @param w4r - 'wait-4-reply' expexted flag
+ * @return TX_msg* 
  */
-struct RX_msg {
-    uint8_t *rawdata;                               // raw serial data pointer
-    const size_t len;                               // msg size
-    const bool valid;                               // valid MODBUS message (CRC16 OK)
-    const uint8_t addr = rawdata[0];                // slave address
-    const pzemcmd_t cmd = (pzemcmd_t)rawdata[1];    // command code
+TX_msg* create_msg(uint8_t cmd, uint16_t reg_addr, uint16_t value, uint8_t slave_addr = ADDR_ANY, bool w4r = true);
 
-    RX_msg(uint8_t *data, const size_t size) : rawdata(data), len(size), valid(checkcrc16(data, size)) {}
-    ~RX_msg(){ delete[] rawdata; rawdata = nullptr; }
-};
+/**
+ * @brief  message request to change slave device modbus address
+ * 
+ * @param addr - new modbus address
+ * @param current_addr - current modbus address
+ * @return TX_msg* 
+ */
+TX_msg* cmd_set_modbus_addr(uint8_t addr, const uint8_t current_addr = ADDR_ANY);
+
+/**
+ * @brief create MSG - reset PZEM's Energy counter to zero
+ * 
+ * @param addr - device address
+ * @return TX_msg* pointer to the message struct
+ */
+TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
+
+}   // end of 'namespace pzmbus'
+
+
+namespace pz004 {
+
+// Enumeration of available energy metrics
+enum class meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm };
+
+// Enumeration of available MODBUS commands
 
 
 /**
@@ -183,7 +186,7 @@ struct metrics {
     }
 
     bool parse_rx_msg(const RX_msg *m){
-        if (m->cmd != pzemcmd_t::RIR || m->rawdata[2] != REG_METER_RESP_LEN)
+        if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != REG_METER_RESP_LEN)
             return false;
 
         uint8_t const *value = &m->rawdata[3];
@@ -208,7 +211,7 @@ struct pzem_state {
     metrics data;
     uint16_t alrm_thrsh=0;
     bool alarm=false;
-    pzem_err_t err;
+    pzmbus::pzem_err_t err;
     int64_t poll_us=0;     // last poll request sent time, microseconds since boot
     int64_t update_us=0;   // last succes update time, us since boot
 
@@ -249,16 +252,16 @@ struct pzem_state {
         if (m->addr != addr && skiponbad)    // this is not "my" packet
             return false;
 
-        switch (m->cmd){
-            case pzemcmd_t::RIR : {
+        switch (static_cast<pzmbus::pzemcmd_t>(m->cmd)){
+            case pzmbus::pzemcmd_t::RIR : {
                 if(data.parse_rx_msg(m))  // try to parse it as a full metrics packet
                     break;
                 else {
-                    err = pzem_err_t::err_parse;
+                    err = pzmbus::pzem_err_t::err_parse;
                     return false;
                 }
             }
-            case pzemcmd_t::RHR : {
+            case pzmbus::pzemcmd_t::RHR : {
                 if (m->rawdata[2] == WREG_LEN * 2){ // we got full len RHR data
                     alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
                     addr = m->rawdata[6];
@@ -266,7 +269,7 @@ struct pzem_state {
                 // unknown regs
                 break;
             }
-            case pzemcmd_t::WSR : {
+            case pzmbus::pzemcmd_t::WSR : {
                 // 4th byte is reg ADDR_L
                 if (m->rawdata[3] == WREG_ADDR){
                     addr = m->rawdata[5];            // addr is only one byte
@@ -276,40 +279,26 @@ struct pzem_state {
                 }
                 break;
             }
-            case pzemcmd_t::reset_energy :
+            case pzmbus::pzemcmd_t::reset_energy :
                 data.energy=0;                      // nothing to do, except reset conter
                 break;
-            case pzemcmd_t::read_err :
-            case pzemcmd_t::write_err :
-            case pzemcmd_t::reset_err :
-            case pzemcmd_t::calibrate_err :
+            case pzmbus::pzemcmd_t::read_err :
+            case pzmbus::pzemcmd_t::write_err :
+            case pzmbus::pzemcmd_t::reset_err :
+            case pzmbus::pzemcmd_t::calibrate_err :
                 // стоит ли здесь инвалидировать метрики???
-                err = (pzem_err_t)m->rawdata[2];
+                err = (pzmbus::pzem_err_t)m->rawdata[2];
                 return true;
             default:
                 break;
         }
 
-        err = pzem_err_t::err_ok;
+        err = pzmbus::pzem_err_t::err_ok;
         update_us = esp_timer_get_time();
         return true;
     }
 
 };
-
-
-/**
- * @brief Create a msg object with PZEM command wrapped into proper MODBUS message
- * this is a genereic command template
- * 
- * @param cmd - PZEM command
- * @param reg_addr - register address
- * @param value - command value
- * @param slave_addr - slave device modbus address
- * @param w4r - 'wait-4-reply' expexted flag
- * @return TX_msg* 
- */
-TX_msg* create_msg(pzemcmd_t cmd, uint16_t reg_addr, uint16_t value, uint8_t slave_addr = ADDR_ANY, bool w4r = true);
 
 /**
  * @brief message request for all energy metrics
@@ -328,16 +317,9 @@ TX_msg* cmd_get_metrics(uint8_t addr = ADDR_ANY);
  * @param addr 
  * @return TX_msg* 
  */
-TX_msg* cmd_get_rhrs(const uint8_t addr = ADDR_ANY);
+TX_msg* cmd_get_opts(const uint8_t addr = ADDR_ANY);
 
-/**
- * @brief  message request to change slave device modbus address
- * 
- * @param addr - new modbus address
- * @param current_addr - current modbus address
- * @return TX_msg* 
- */
-TX_msg* cmd_set_modbus_addr(uint8_t addr, const uint8_t current_addr = ADDR_ANY);
+TX_msg* cmd_set_modbus_addr(uint8_t new_addr, const uint8_t current_addr = ADDR_ANY);
 
 /**
  * @brief message request to report current slave device modbus address
@@ -364,31 +346,7 @@ TX_msg* cmd_set_alarm_thr(uint16_t w, const uint8_t addr = ADDR_ANY);
  */
 TX_msg* cmd_get_alarm_thr(const uint8_t addr = ADDR_ANY);
 
-/**
- * @brief create MSG - reset PZEM's Energy counter to zero
- * 
- * @param addr - device address
- * @return TX_msg* pointer to the message struct
- */
 TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
-
-
-/**
- * @brief calculate crc16 over *data array using CRC16_MODBUS precomputed table
- * 
- * @param data - byte array, must be 2 bytes at least
- * @param size  - array size
- * @return uint16_t CRC16
- */
-uint16_t crc16(const uint8_t *data, uint16_t size);
-
-/**
- * @brief set CRC16 to the byte array at position (len-2)
- * CRC16 calculated up to *data[len-2] bytes
- * @param data - source array fer
- * @param len - array size
- */
-void setcrc16(uint8_t *data, uint16_t len);
 
 /**
  * @brief dump content of received packet to the stdout

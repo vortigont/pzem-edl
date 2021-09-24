@@ -12,8 +12,6 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 #include "uartq.hpp"
 
-using namespace pzmbus;
-
 UartQ::~UartQ(){
     stopQueues();
     uart_driver_delete(port);

@@ -13,7 +13,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "pzem_edl.hpp"
 #include "esp32-hal-log.h"
 
-using namespace pzmbus;
+using namespace pz004;
 
 #define POLLER_NAME         "PZ_poll"
 #define POOL_POLLER_NAME    "PZP_Poll"
@@ -45,7 +45,7 @@ void PZEM::attachUartQ(UartQ *qport, bool tx_only){
     if (tx_only)
         return;
 
-    q->attach_RX_hndlr( [this](pzmbus::RX_msg *msg){ 
+    q->attach_RX_hndlr( [this](RX_msg *msg){ 
             rx_sink(msg);
             delete msg;     // must delete the message once processed, otherwise it will leak mem
         });
@@ -62,7 +62,7 @@ void PZEM::detachUartQ(){
     sink_lock = false;
 }
 
-void PZEM::rx_sink(const pzmbus::RX_msg *msg){
+void PZEM::rx_sink(const RX_msg *msg){
     if (pz.parse_rx_mgs(msg)){          // update meter state with new packet data (if valid)
         if (rx_callback)
             rx_callback(id, msg);       // run external call-back function
@@ -164,7 +164,7 @@ bool PZPool::addPort(std::shared_ptr<PZPort> port){
     uint8_t portid = port->id;
 
     // RX handler lambda catches port-id here and suppies this id to the handler function
-    port->attach_RX_hndlr([this, portid](pzmbus::RX_msg *msg){
+    port->attach_RX_hndlr([this, portid](RX_msg *msg){
             if (!msg)
                 return;
 
@@ -231,7 +231,7 @@ bool PZPool::removePZEM(const uint8_t pzem_id){
     return false;
 }
 
-void PZPool::rx_dispatcher(const pzmbus::RX_msg *msg, const uint8_t port_id){
+void PZPool::rx_dispatcher(const RX_msg *msg, const uint8_t port_id){
     // битые пакеты отбрасываем сразу
     if (!msg->valid){
         #ifdef PZEM_EDL_DEBUG

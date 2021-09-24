@@ -12,7 +12,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 
 #include "main.h"
-using namespace pzmbus;
+using namespace pz004;
 
 /*
     This is a small sketch that shows how to run multiple PZEM instances over one or two serial ports:
@@ -161,7 +161,7 @@ void setup(){
 
     // let's assign our callback to the PZPool instance.
     // I'm using lambda here to provide functional callback
-    meters->attach_rx_callback([](uint8_t pzid, const pzmbus::RX_msg* m){
+    meters->attach_rx_callback([](uint8_t pzid, const RX_msg* m){
 
         // I can do all the required things here, but to keep it sepparate -
         // let's just call our function
@@ -198,7 +198,7 @@ void loop(){
  * @param id - this will be the ID of PZEM object, receiving the data
  * @param m - this will be the struct with PZEM data (not only metrics, but any one)
  */
-void mycallback(uint8_t id, const pzmbus::RX_msg* m){
+void mycallback(uint8_t id, const RX_msg* m){
 
 // Here I can get the id of PZEM (might get handy if have more than one attached)
    Serial.printf("\nTime: %ld / Heap: %d - Callback triggered for PZEM ID: %d, name: %s\n", millis(), ESP.getFreeHeap(), id,  meters->getDescr(id));

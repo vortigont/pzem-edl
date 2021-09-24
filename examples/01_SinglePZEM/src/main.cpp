@@ -13,7 +13,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "main.h"
 // #include "pzem_edl.hpp"
 
-using namespace pzmbus;     // we will need this namespace
+using namespace pz004;     // we will need this namespace
 
 /*
     This is a small sketch that shows how to run a single PZEM instance:
@@ -140,7 +140,7 @@ void setup(){
 
     // let's assign our callback to the PZEM instance.
     // I'm using lambda here to provide functional callback
-    pz->attach_rx_callback([](uint8_t pzid, const pzmbus::RX_msg* m){
+    pz->attach_rx_callback([](uint8_t pzid, const RX_msg* m){
 
         // I can do all the required things here, but to keep it sepparate -
         // let's just call our function
@@ -171,7 +171,7 @@ void loop(){
  * @param id - this will be the ID of PZEM object, receiving the data
  * @param m - this will be the struct with PZEM data (not only metrics, but any one)
  */
-void mycallback(uint8_t id, const pzmbus::RX_msg* m){
+void mycallback(uint8_t id, const RX_msg* m){
 
 // Here I can get the id of PZEM (might get handy if have more than one attached)
     Serial.printf("\nCallback triggered for PZEM ID: %d\n", id);

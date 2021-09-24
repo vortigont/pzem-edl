@@ -11,10 +11,13 @@ GitHub: https://github.com/vortigont/pzem-edl
 */
 
 #pragma once
-#include "pzem_modbus.hpp"
 #include "driver/uart.h"
 #include <functional>
 #include <memory>
+#include "modbus_crc16.h"
+#include <string.h>
+#include "esp32-hal-log.h"
+
 
 #define PZEM_BAUD_RATE          9600
 #define PZEM_UART               UART_NUM_1      // HW Serial Port 2 on ESP32
@@ -55,6 +58,39 @@ UART0 	GPIO 1 	    GPIO 3 	    GPIO 22 	GPIO 19
 UART1 	GPIO 9 	    GPIO 10 	GPIO 11 	GPIO 6
 UART2 	GPIO 16 	GPIO 17 	GPIO 7 	    GPIO 8 
 */
+
+/**
+ * @brief Structure with Modbus-RTU message data
+ * ment to be sent over UART
+ */
+
+struct TX_msg {
+    const size_t len;       // msg size
+    uint8_t* data;          // data pointer
+    bool w4rx;              // 'wait for reply' - a reply for message expected, should block TX queue handler
+
+    TX_msg(const size_t size, bool rxreq = true) : len(size), w4rx(rxreq) {
+        data = (uint8_t*)malloc(len);
+        //memcpy(data, srcdata, len);
+    }
+    ~TX_msg(){ delete[] data; data = nullptr; }
+};
+
+
+/**
+ * @brief struct with Modbus-RTU RX data message
+ * 
+ */
+struct RX_msg {
+    uint8_t *rawdata;                               // raw serial data pointer
+    const size_t len;                               // msg size
+    const bool valid;                               // valid MODBUS message (CRC16 OK)
+    const uint8_t addr = rawdata[0];                // slave address
+    const uint8_t cmd =  rawdata[1];                // modbus command code
+
+    RX_msg(uint8_t *data, const size_t size) : rawdata(data), len(size), valid(modbus::checkcrc16(data, size)) {}
+    ~RX_msg(){ delete[] rawdata; rawdata = nullptr; }
+};
 
 /**
  * @brief PZEM UART port instance configuration structure
@@ -102,7 +138,7 @@ struct PZPort_cfg {
  * - Pin assignment: TxD (default), RxD (default)
  */
 class UartQ {
-    typedef std::function<void (pzmbus::RX_msg*)> datahandler_t;
+    typedef std::function<void (RX_msg*)> datahandler_t;
 
     void init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx);
 
@@ -110,7 +146,7 @@ public:
     UartQ(const uart_port_t p, const uart_config_t cfg, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){ init(cfg, gpio_rx, gpio_tx); }
 
     UartQ(const uart_port_t p, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){
-        uart_config_t uartcfg = {
+        uart_config_t uartcfg = {     // default values for PZEMv30
             .baud_rate = PZEM_BAUD_RATE,
             .data_bits = UART_DATA_8_BITS,
             .parity = UART_PARITY_DISABLE,
@@ -147,19 +183,19 @@ public:
 
     /**
      * @brief enqueue PZEM message and transmit once TX line is free to go
-     * this method will take ownership on pzmbus::TX_msg object and 'delete' it
+     * this method will take ownership on TX_msg object and 'delete' it
      * after sending to FIFO. It is an error to access/delete/change this object once passed here
      * 
      * @param msg PZEM command message object
      * @return true - if mesage has been enqueue's successfully
      * @return false - if enqueue failed due to Q is full or any other issue
      */
-    bool txenqueue(pzmbus::TX_msg *msg);
+    bool txenqueue(TX_msg *msg);
 
     /**
      * @brief attach call-back function to feed it with arriving messages from RX line
      * if there is no call-back attached, incoming messages are discarded
-     * @param f functional call-back 'std::function<void (pzmbus::RX_msg*)>'
+     * @param f functional call-back 'std::function<void (RX_msg*)>'
      */
     virtual void attach_RX_hndlr(datahandler_t f);
 
@@ -207,7 +243,7 @@ private:
         if (tx_msg_q)           // queue already exist
             return true;
 
-        tx_msg_q = xQueueCreate( tx_msg_q_DEPTH, sizeof(pzmbus::TX_msg*) ); // make q for MSG struct pointers
+        tx_msg_q = xQueueCreate( tx_msg_q_DEPTH, sizeof(TX_msg*) ); // make q for MSG struct pointers
 
         if (!tx_msg_q)
             return false;
@@ -238,7 +274,7 @@ private:
 
     /**
      * @brief RX Queue event handler function
-     * NOTE: On RX event, handler creates new pzmbus::RX_msg object with received data
+     * NOTE: On RX event, handler creates new RX_msg object with received data
      * once this object is passed to the call-back function - it is up to the calee
      * to maintaint life-time of the object. Once utilised it MUST be 'delete'ed to prevent mem leaks
      */
@@ -283,7 +319,7 @@ private:
                                 break;
                             }
 
-                            pzmbus::RX_msg *msg = new pzmbus::RX_msg(buff, datalen);
+                            RX_msg *msg = new RX_msg(buff, datalen);
 
                             #ifdef PZEM_EDL_DEBUG
                                 ESP_LOGD(TAG, "got RX data packet from buff, len: %d, t: %ld", datalen, micros());
@@ -326,7 +362,7 @@ private:
      */
     void txqueuehndlr(){
 
-        pzmbus::TX_msg* msg = nullptr;
+        TX_msg* msg = nullptr;
 
         // Task runs inside Infinite loop
         for (;;){

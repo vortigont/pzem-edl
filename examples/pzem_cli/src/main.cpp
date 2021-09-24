@@ -12,7 +12,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 
 #include "main.h"
-using namespace pzmbus;
+using namespace pz004;
 
 #define PZEM_UART_PORT   UART_NUM_1       // port attached to pzem (UART_NUM_1 is 2-nd uart port on ESP32, 1-st one is usually busy with USB-to-serial chip)
 
@@ -43,7 +43,7 @@ void setup(){
 
     qport = new UartQ(PZEM_UART_PORT, RX_PIN, TX_PIN);      // or use custom pins
     qport->startQueues();                                   // start queues tasks
-    qport->attach_RX_hndlr([](pzmbus::RX_msg *msg){ rx_handler(msg); delete msg; });        // attach call-back function to process pzem replies
+    qport->attach_RX_hndlr([](RX_msg *msg){ rx_handler(msg); delete msg; });        // attach call-back function to process pzem replies
 
     // now we are ready to exchange messages
 }
@@ -178,7 +178,7 @@ void set_alrm_thr(){
  * 
  * @param m 
  */
-void rx_handler(pzmbus::RX_msg* m){
+void rx_handler(RX_msg* m){
 
     // check if received packet is valid
     if(!m->valid){

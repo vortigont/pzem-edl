@@ -12,4 +12,4 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 #include "pzem_edl.hpp"
 
-void mycallback(uint8_t id, const pzmbus::RX_msg* m);
+void mycallback(uint8_t id, const RX_msg* m);

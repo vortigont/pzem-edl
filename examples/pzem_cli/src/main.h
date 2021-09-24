@@ -10,11 +10,11 @@ Copyright (C) Emil Muratov, 2021
 GitHub: https://github.com/vortigont/pzem-edl
 */
 
-#include "uartq.hpp"
+#include "pzem_modbus.hpp"
 
 void menu();
 void get_addr_bcast();
-void rx_handler(pzmbus::RX_msg* m);
+void rx_handler(RX_msg* m);
 void set_mbus_addr();
 void get_metrics();
 void reset_nrg();
