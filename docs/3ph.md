@@ -1,3 +1,9 @@
+PZEM-EDL - PZEM event-driven library
+======
+
+__[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md) | [DOCS](/docs/README.md)__
+
+
 PZEM for 3-phase lines
 ======
 
@@ -12,7 +18,7 @@ Leave this to the PRO's if you have no proper skills to work with high voltage e
 You've been **warned**!
 
 <div align="center">
-  <img src="pzem_3ph.svg" width="600" alt="pzem 3 phase wiring"/>
+  <img src="pzem_3ph.svg" width="1000" alt="pzem 3 phase wiring"/>
 </div>
 
 NOTE:
