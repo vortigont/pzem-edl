@@ -39,8 +39,8 @@
     },
     "examples": [
         {
-            "name": "Single PZEM",
-            "base": "examples/01_SinglePZEM",
+            "name": "Single PZEM004",
+            "base": "examples/01_SinglePZEM004",
             "files": [
                 "platformio.ini",
                 "src/main.h",
@@ -49,8 +49,18 @@
             ]
         },
         {
-            "name": "Multiple PZEM",
-            "base": "examples/02_MultiplePZEM",
+            "name": "Single PZEM003",
+            "base": "examples/02_SinglePZEM003",
+            "files": [
+                "platformio.ini",
+                "src/main.h",
+                "src/main.cpp",
+                "src/src.ino"
+            ]
+        },
+        {
+            "name": "Multiple PZEM004",
+            "base": "examples/03_MultiplePZEM",
             "files": [
                 "platformio.ini",
                 "src/main.h",
