@@ -1,11 +1,13 @@
 PZEM-EDL - Examples
 ======
 
-[01_SinglePZEM](/examples/01_SinglePZEM) - An example for single PZEM device
+[01_SinglePZEM004](/examples/01_SinglePZEM) - An example for single PZEM004v3 device (AC 10/100 Amps meter)
 
-[02_MultiplePZEM](/examples/02_MultiplePZEM) - An example for a pool with Multiple PZEM devices on different ports
+[01_SinglePZEM004](/examples/01_SinglePZEM) - An example for single PZEM003 device (DC 10/50/100/200/300 Amps meter)
 
-[pzem_cli](/examples/pzem_cli) - PZEM CLI tool, works over serial console and provides the following features
+[03_MultiplePZEM004](/examples/02_MultiplePZEM) - An example for a pool with Multiple PZEM004 devices on different ports
+
+[pzem_cli](/examples/pzem_cli) - PZEM004 CLI tool, works over serial console and provides the following features
  - PZEM metrics reading
  - read/change MODBUS address
  - read/change Power Alarm threshold

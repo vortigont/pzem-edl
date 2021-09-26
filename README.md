@@ -24,7 +24,7 @@ Feel free to open a discussion topic on any questions.
 
 
 ### Supported modules
- - PZEM-004Tv3.0 (same as PZEM-014/PZEM-016) AC 20/100 Amps meter
+ - PZEM-004Tv3.0 (same as PZEM-014/PZEM-016) AC 10/100 Amps meter
  - PZEM-003 (same as PZEM-017) DC 10/50/100/200/300 Amps meter (not tested)
 
 

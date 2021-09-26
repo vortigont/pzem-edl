@@ -2,9 +2,9 @@
     "name": "pzem-edl",
     "frameworks": "arduino",
     "platforms": ["espressif32"],
-    "version": "0.0.1",
-    "keywords": "peacefair, pzem, powermeter",
-    "description": "PZEM event-driven library - an ESP32/Arduino framework library implementing communication interface for PeaceFair PZEM-004Tv3.0 Energy monitor modules via MODBUS proto",
+    "version": "0.0.2",
+    "keywords": "peacefair, pzem, powermeter, pzem004t, pzem003, pzem-017, pzem-017",
+    "description": "PZEM event-driven library - an ESP32/Arduino framework library implementing communication interface for PeaceFair PZEM-004Tv3.0/PZEM-003 Energy monitor modules via Modbus-RTU proto",
     "url": "https://github.com/vortigont/espem-edl",
     "authors": [
         {
