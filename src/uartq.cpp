@@ -73,7 +73,7 @@ bool UartQ::txenqueue(TX_msg *msg){
     }
 
     #ifdef PZEM_EDL_DEBUG
-        ESP_LOGD(TAG, "TX packet enque, t: %ld", micros());
+        ESP_LOGD(TAG, "TX packet enque, t: %ld", esp_timer_get_time()/1000);
     #endif
 
     if (xQueueSendToBack(tx_msg_q, (void *) &msg, (TickType_t)0) == pdTRUE)
@@ -96,6 +96,44 @@ void UartQ::detach_RX_hndlr(){
     stop_RX_evt_queue();
 }
 
+//#define PZEM_EDL_DEBUG
+#ifdef PZEM_EDL_DEBUG
+void UartQ::rx_msg_debug(const RX_msg *m){
+    if (!m->len){
+        ESP_LOGE(TAG, "Zero len RX packet");
+        return;
+    }
+    char *buff = new char[m->len * 4];
+    char *ptr = buff;
+    for(uint8_t i=0; i < m->len; ++i){
+        ptr += sprintf(ptr, "%.2x ", m->rawdata[i]);
+    }
+    ptr=0;
+    // выводим с ERROR severity, т.к. по умолчанию CORE_DEBUG_LEVEL глушит дебаг
+    ESP_LOGE(TAG, "RX packet, len:%d, CRC: %s, HEX: %s", m->len, m->valid ? "OK":"BAD", buff);
+    delete[] buff;
+}
+
+void UartQ::tx_msg_debug(const TX_msg *m){
+    if (!m->len){
+        ESP_LOGE(TAG, "Zero len TX packet");
+        return;
+    }
+    char *buff = new char[m->len * 4];
+    char *ptr = buff;
+    for(uint8_t i=0; i < m->len; ++i){
+        ptr += sprintf(ptr, "%.2x ", m->data[i]);
+    }
+    ptr=0;
+    // print with ERROR severity, so no need to redefine CORE_DEBUG_LEVEL
+    ESP_LOGE(TAG, "TX packet, len:%d, HEX: %s", m->len, buff);
+    delete[] buff;
+}
+
+#else
+void UartQ::rx_msg_debug(RX_msg *m){}
+void UartQ::rx_msg_debug(TX_msg *m){}
+#endif
 
 const char* PZPort::getDescr() const {
     return descr.get();

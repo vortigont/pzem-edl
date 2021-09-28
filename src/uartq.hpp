@@ -271,6 +271,19 @@ private:
         ((UartQ*)pvParams)->txqueuehndlr();
     }
 
+    /**
+     * @brief dump content of received packet to the stdout
+     * 
+     * @param m 
+     */
+    void rx_msg_debug(const RX_msg *m);
+
+    /**
+     * @brief dump content of transmitted packet to the stdout
+     * 
+     * @param m 
+     */
+    void tx_msg_debug(const TX_msg *m);
 
     /**
      * @brief RX Queue event handler function
@@ -300,7 +313,7 @@ private:
                         size_t datalen = 0;
                         ESP_ERROR_CHECK(uart_get_buffered_data_len(port, &datalen));
                         if (0 == datalen){
-                            ESP_LOGD(TAG, "can't retreive RX data from buffer, t: %ld", micros());
+                            ESP_LOGD(TAG, "can't retreive RX data from buffer, t: %ld", esp_timer_get_time()/1000);
                             uart_flush_input(port);
                             xQueueReset(rx_evt_queue);
                             break;
@@ -322,7 +335,7 @@ private:
                             RX_msg *msg = new RX_msg(buff, datalen);
 
                             #ifdef PZEM_EDL_DEBUG
-                                ESP_LOGD(TAG, "got RX data packet from buff, len: %d, t: %ld", datalen, micros());
+                                ESP_LOGD(TAG, "got RX data packet from buff, len: %d, t: %ld", datalen, esp_timer_get_time()/1000);
                                 rx_msg_debug(msg);
                             #endif
 
@@ -380,7 +393,7 @@ private:
                 uart_write_bytes(port, (const char*)msg->data, msg->len);
 
                 #ifdef PZEM_EDL_DEBUG
-                    ESP_LOGD(TAG, "PZEM TX packet sent to uart FIFO, t: %ld", micros());
+                    ESP_LOGD(TAG, "PZEM TX packet sent to uart FIFO, t: %ld", esp_timer_get_time()/1000);
                     tx_msg_debug(msg);
                 #endif
 
@@ -392,7 +405,6 @@ private:
         // Task needs to self-terminate before returning (but we should not ever reach this point anyway)
         vTaskDelete(NULL);
     }
-
 
 };
 

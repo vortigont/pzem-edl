@@ -152,21 +152,7 @@ TX_msg* cmd_set_modbus_addr(uint8_t addr, const uint8_t current_addr = ADDR_ANY)
  */
 TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
 
-/**
- * @brief dump content of received packet to the stdout
- * 
- * @param m 
- */
-void rx_msg_debug(const RX_msg *m);
-
-/**
- * @brief dump content of transmitted packet to the stdout
- * 
- * @param m 
- */
-void tx_msg_debug(const TX_msg *m);
 }   // end of 'namespace pzmbus'
-
 
 namespace pz004 {
 
