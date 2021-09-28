@@ -131,8 +131,8 @@ void UartQ::tx_msg_debug(const TX_msg *m){
 }
 
 #else
-void UartQ::rx_msg_debug(RX_msg *m){}
-void UartQ::rx_msg_debug(TX_msg *m){}
+void UartQ::rx_msg_debug(const RX_msg *m){}
+void UartQ::tx_msg_debug(const TX_msg *m){}
 #endif
 
 const char* PZPort::getDescr() const {
