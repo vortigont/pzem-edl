@@ -262,15 +262,15 @@ void PZPool::rx_dispatcher(const RX_msg *msg, const uint8_t port_id){
     }
     
     //  ищем объект совпадающий по паре порт/modbus_addr
-    for (int i = 0; i != meters.size(); ++i) {
-        if (meters[i]->pzem->getaddr() == msg->addr && meters[i]->port->id == port_id){
+    for (const auto& i : meters){
+        if (i->pzem->getaddr() == msg->addr && i->port->id == port_id){
             #ifdef PZEM_EDL_DEBUG
             ESP_LOGD(TAG, "Got match PZEM Node for port:%d , addr:%d\n", port_id, msg->addr);
             #endif
-            meters[i]->pzem->rx_sink(msg);
+            i->pzem->rx_sink(msg);
 
             if (rx_callback)
-                rx_callback(meters[i]->pzem->id, msg);       // run external call-back function (if set)
+                rx_callback(i->pzem->id, msg);       // run external call-back function (if set)
             return;
         }
     }
@@ -280,26 +280,23 @@ void PZPool::rx_dispatcher(const RX_msg *msg, const uint8_t port_id){
 }
 
 void PZPool::updateMetrics(){
-   for (int i = 0; i != meters.size(); ++i) {
-       meters[i]->pzem->updateMetrics();
-   }
+    for (const auto& i : meters)
+       i->pzem->updateMetrics();
 }
 
-// todo: дописать итераторы для класса LList
 std::shared_ptr<PZPort> PZPool::port_by_id(uint8_t id){
-   for (int i = 0; i != ports.size(); ++i) {
-        if (ports[i]->id == id)
-            return ports[i];
-   }
+    for (auto i : ports){
+        if (i->id == id)
+            return i;
+    }
 
     return nullptr;
 }
 
-// todo: дописать итераторы для класса LList
 PZ004* PZPool::pzem_by_id(uint8_t id){
-   for (int i = 0; i != meters.size(); ++i) {
-        if (meters[i]->pzem->id == id)
-            return meters[i]->pzem.get();
+    for (auto i : meters){
+        if (i->pzem->id == id)
+            return i->pzem.get();
    }
 
     return nullptr;

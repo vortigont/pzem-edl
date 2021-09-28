@@ -21,9 +21,9 @@
     },
     "dependencies":
     [
-         {"owner": "ivanseidel",
+         {"owner": "vortigont",
           "name": "LinkedList",
-          "version": "https://github.com/vortigont/LinkedList#feat"}
+          "version": "https://github.com/vortigont/LinkedList#vortigont"}
     ],
     "export": {
         "include":
