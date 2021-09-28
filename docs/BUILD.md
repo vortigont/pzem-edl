@@ -1,5 +1,5 @@
 ### External Libs
-The only external lib used is [ivanseidel/LinkedList](https://github.com/ivanseidel/LinkedList). It is already included into library manifest for Platformio, so should be picked up automatically.
+The only external lib used is [vortigont/LinkedList](https://github.com/vortigont/LinkedList#vortigont). It is already included into library manifest for Platformio, so should be picked up automatically.
 
 
 ### Build-time defines
