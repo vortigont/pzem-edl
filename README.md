@@ -1,10 +1,10 @@
 PZEM-EDL - PZEM event-driven library
 ======
 
-__[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md) | [DOCS](/docs/README.md)__ | [![PlatformIO Build](https://github.com/vortigont/pzem-edl/actions/workflows/pio_build.yml/badge.svg)](https://github.com/vortigont/pzem-edl/actions/workflows/pio_build.yml)
+__[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md) | [DOCS](/docs/README.md)__ | [![PlatformIO CI](https://github.com/vortigont/pzem-edl/actions/workflows/pio_build.yml/badge.svg)](https://github.com/vortigont/pzem-edl/actions/workflows/pio_build.yml)
 
 
-This is an ESP32/Arduino framework library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0**/**PZEM-003** Energy monitor modules via MODBUS proto.
+This is an ESP32 Arduino/esp-idf library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0**/**PZEM-003** Energy monitor modules via MODBUS proto.
 
 **_currently lib is in it's early develompent state, so expect bugs, issues and sporadic API changes any time_**
 
@@ -29,7 +29,7 @@ Feel free to open a discussion topic on any questions.
 
 
 ### Limitations
- * ESP32 platform only
+ * ESP32 platform only (Arduino/ESP-IDF compatible)
  * Hardware Serial only (not a problem for esp32, it has 3 of it with pin remapping)
 
 ### TODO list
@@ -42,7 +42,6 @@ Feel free to open a discussion topic on any questions.
     * JSON
     * binary
     * csv
- * PZEM017 support
 
 
 ### How it works

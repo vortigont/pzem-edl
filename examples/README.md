@@ -12,3 +12,5 @@ PZEM-EDL - Examples
  - read/change MODBUS address
  - read/change Power Alarm threshold
  - reset Energy counter
+
+[esp-idf](/examples/esp-idf) - Single PZEM004 device poller build under ESP-IDF

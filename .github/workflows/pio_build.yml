@@ -21,6 +21,7 @@ jobs:
           - "examples/02_SinglePZEM003"
           - "examples/03_MultiplePZEM"
           - "examples/pzem_cli"
+          - "examples/esp-idf"
 
     steps:
     - uses: actions/checkout@v2
