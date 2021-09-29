@@ -517,6 +517,7 @@ struct pzem_state {
                     err = pzmbus::pzem_err_t::err_parse;
                     return false;
                 }
+                break;
             }
             case pzmbus::pzemcmd_t::RHR : {
                 if (m->rawdata[2] == PZ003_RHR_CNT * 2){ // we got full len RHR data
@@ -546,6 +547,7 @@ struct pzem_state {
                     default:
                         break;
                 }
+                break;
             }
             case pzmbus::pzemcmd_t::reset_energy :
                 data.energy=0;                      // nothing to do, except reset conter
@@ -557,6 +559,7 @@ struct pzem_state {
                 // стоит ли здесь инвалидировать метрики???
                 err = (pzmbus::pzem_err_t)m->rawdata[2];
                 return true;
+                break;
             default:
                 break;
         }

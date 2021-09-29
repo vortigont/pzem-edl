@@ -45,7 +45,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define TXQ_TASK_NAME           "UART_TXQ"
 
 // ESP32 log tag
-#define TAG "UartQ"
+static const char *TAG = "UartQ";
 
 /*
 Ref links:
