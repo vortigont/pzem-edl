@@ -10,6 +10,7 @@ Copyright (C) Emil Muratov, 2021
 GitHub: https://github.com/vortigont/pzem-edl
 */
 
+#include <Arduino.h>
 #include "pzem_edl.hpp"
 
 void mycallback(uint8_t id, const RX_msg* m);
