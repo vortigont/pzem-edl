@@ -13,22 +13,13 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "main.h"
 // #include "pzem_edl.hpp"
 
+using namespace pz004;     // we will need this namespace for PZEM004v3.0 device
 
 /*
-  will need this namespace's methods to work with
-  PZEM-003 (same as PZEM-017) DC 10/50/100/200/300 Amps meter 
-
-  NOTE: I do not have any of PZEM003 DC devies to make real test-case scenarios,
-  I only imlemented MODBUS RTU proto according to specs.
-  Pls, provide any feedback
-*/
-using namespace pz003;     
-
-/*
-    This is a small sketch that shows how to run a single PZEM003 instance:
+    This is a small sketch that shows how to run a single PZEM004 instance:
     
      - create an event-driven UART Queue object
-     - create PZ003 instance
+     - create PZ004 instance
      - attach UART Queue to the PZEM instance
      - mannualy poll for data
      - enable auto-polling
@@ -52,27 +43,22 @@ using namespace pz003;
 UartQ *qport;
 
 // Also we need a placeholder for PZEM object
-PZ003 *pz;
+PZ004 *pz;
 
 void setup(){
     Serial.begin(115200);       // just an ordinary Serial console to interact with
 
-    Serial.printf("\n\n\n\tPZEM003 single instance example\n\n");
+    Serial.printf("\n\n\n\tPZEM004 single instance example\n\n");
 
-    // PZEM003 requires custom config for serial port
-    uart_config_t cfg = {
-            .baud_rate = PZEM_BAUD_RATE,
-            .data_bits = UART_DATA_8_BITS,
-            .parity = UART_PARITY_DISABLE,
-            .stop_bits = UART_STOP_BITS_2,          // PZEM003 need 2 stop bits
-            .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
-        };
 
-    // we can map port to any custom pins and use our config for serial port setup
-    qport = new UartQ(PZEM_UART_PORT, cfg, RX_PIN, TX_PIN);      // or use custom pins
+    // Create a new PortQ object using default UART pins for the port specified
+    // qport = new UartQ(PZEM_UART_PORT);
+
+    // OR we can map port to any custom pins
+    qport = new UartQ(PZEM_UART_PORT, RX_PIN, TX_PIN);      // or use custom pins
 
     // Now let's create a PZEM object
-    pz = new PZ003(PZEM_ID);
+    pz = new PZ004(PZEM_ID);
 
     // and link our port with PZEM object
     pz->attachUartQ(qport);
