@@ -11,7 +11,11 @@ GitHub: https://github.com/vortigont/pzem-edl
 */
 
 #include <pzem_modbus.hpp>
+#ifdef ARDUINO
 #include "esp32-hal-log.h"
+#else
+#include "esp_log.h"
+#endif
 
 namespace pzmbus {
 

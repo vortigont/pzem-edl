@@ -11,8 +11,8 @@ GitHub: https://github.com/vortigont/pzem-edl
 */
 
 #pragma once
-#include <Arduino.h>
 #include "uartq.hpp"
+#include <cmath>
 
 // Read-Only 16-bit registers
 #define REG_VOLTAGE             0x0000  // 1LSB correspond to 0.1 V

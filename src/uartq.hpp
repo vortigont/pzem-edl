@@ -16,7 +16,12 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include <memory>
 #include "modbus_crc16.h"
 #include <string.h>
+
+#ifdef ARDUINO
 #include "esp32-hal-log.h"
+#else
+#include "esp_log.h"
+#endif
 
 
 #define PZEM_BAUD_RATE          9600
@@ -39,8 +44,8 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define TXQ_TASK_STACK          2048
 #define TXQ_TASK_NAME           "UART_TXQ"
 
-
-
+// ESP32 log tag
+#define TAG "UartQ"
 
 /*
 Ref links:
@@ -313,13 +318,13 @@ private:
                         size_t datalen = 0;
                         ESP_ERROR_CHECK(uart_get_buffered_data_len(port, &datalen));
                         if (0 == datalen){
-                            ESP_LOGD(TAG, "can't retreive RX data from buffer, t: %ld", esp_timer_get_time()/1000);
+                            ESP_LOGD(TAG, "can't retreive RX data from buffer, t: %lld", esp_timer_get_time()/1000);
                             uart_flush_input(port);
                             xQueueReset(rx_evt_queue);
                             break;
                         }
 
-                        ESP_LOGD(TAG, "RX buff has %d bytes data msg, t: %d", datalen);
+                        ESP_LOGD(TAG, "RX buff has %u bytes data msg, t: %lld", datalen, esp_timer_get_time()/1000);
 
                         uint8_t* buff = (uint8_t*) malloc(datalen);
                         if (buff){

@@ -12,6 +12,8 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 #pragma once
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
 #include "pzem_modbus.hpp"
 #include "LList.h"
 

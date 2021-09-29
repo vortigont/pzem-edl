@@ -11,7 +11,11 @@ GitHub: https://github.com/vortigont/pzem-edl
 */
 
 #include "pzem_edl.hpp"
+#ifdef ARDUINO
 #include "esp32-hal-log.h"
+#else
+#include "esp_log.h"
+#endif
 
 using namespace pz004;
 
