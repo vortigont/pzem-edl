@@ -80,6 +80,9 @@ void setup(){
     // one last step - we must start PortQ tasks to handle messages
     qport->startQueues();
 
+    // set shunt type
+    pz->setShunt(shunt_t::type_50A);
+
     // now it is all ready to exchange data with PZEM
     // let's update it's metrics
     pz->updateMetrics();

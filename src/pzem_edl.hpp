@@ -256,6 +256,13 @@ public:
     void updateMetrics() override;
 
     /**
+     * @brief Set current shunt type
+     * 
+     * @param shunt - predefined shunt types
+     */
+    void setShunt(pz003::shunt_t shunt);
+
+    /**
      * @brief Get the PZEM State object reference
      * it contains all parameters and metrics for PZEM device
      * 

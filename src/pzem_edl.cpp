@@ -151,6 +151,15 @@ void PZ003::updateMetrics(){
     q->txenqueue(cmd);
 }
 
+void PZ003::setShunt(pz003::shunt_t shunt){
+    if (!q)
+        return;
+
+    TX_msg* cmd = pz003::cmd_set_shunt(shunt, pz.addr);
+
+    q->txenqueue(cmd);
+}
+
 void PZ003::rx_sink(const RX_msg *msg){
     if (pz.parse_rx_mgs(msg)){          // update meter state with new packet data (if valid)
         if (rx_callback)

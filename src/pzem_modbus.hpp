@@ -400,6 +400,12 @@ namespace pz003 {
 enum class meter_t:uint8_t { vol, cur, pwr, enrg, alrmh, alrml };
 
 // Enumeration of available MODBUS commands
+enum class shunt_t:uint8_t {
+    type_100A = 0,
+    type_50A = 1,
+    type_200A = 2,
+    type_300A = 3
+};
 
 /**
  * @brief struct with energy metrics data
@@ -617,6 +623,15 @@ TX_msg* cmd_set_alarml_thr(uint16_t w, const uint8_t addr = ADDR_ANY);
  * @return TX_msg* 
  */
 TX_msg* cmd_get_alarm_thr(const uint8_t addr = ADDR_ANY);
+
+/**
+ * @brief set shunt type adjusting current range
+ *
+ * @param shunt
+ * @param addr
+ * @return TX_msg*
+ */
+TX_msg* cmd_set_shunt(shunt_t shunt, const uint8_t addr);
 
 TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
 

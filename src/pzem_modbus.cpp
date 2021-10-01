@@ -159,6 +159,10 @@ TX_msg* cmd_set_alarml_thr(uint16_t w, const uint8_t addr){
     return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::WSR), PZ003_RHR_ALARM_L, w, addr);
 }
 
+TX_msg* cmd_set_shunt(shunt_t shunt, const uint8_t addr){
+    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::WSR), PZ003_RHR_CURRENT_RANGE, static_cast<uint8_t>(shunt), addr);
+}
+
 TX_msg* cmd_energy_reset(const uint8_t addr){return pzmbus::cmd_energy_reset(addr);}
 
 void rx_msg_prettyp(const RX_msg *m){
