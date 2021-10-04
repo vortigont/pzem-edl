@@ -23,7 +23,7 @@
     [
          {"owner": "vortigont",
           "name": "LinkedList",
-          "version": "https://github.com/vortigont/LinkedList#vortigont"}
+          "version": "https://github.com/vortigont/LinkedList"}
     ],
     "export": {
         "include":
