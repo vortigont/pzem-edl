@@ -19,7 +19,8 @@ jobs:
         example:
           - "examples/01_SinglePZEM004"
           - "examples/02_SinglePZEM003"
-          - "examples/03_MultiplePZEM"
+          - "examples/03_MultiplePZEM004"
+          - "examples/04_MixedPool"
           - "examples/pzem_cli"
 
     steps:
