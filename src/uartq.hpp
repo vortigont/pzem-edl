@@ -100,7 +100,7 @@ struct RX_msg {
 /**
  * @brief PZEM UART port instance configuration structure
  * used to spawn new PZPort instances for MODBUS devices
- * other than PZEMv30
+ * other than PZEM004v30
  */
 struct PZPort_cfg {
     uart_port_t p;
@@ -110,15 +110,16 @@ struct PZPort_cfg {
     std::unique_ptr<char[]> descr;
     uart_config_t uartcfg;              // could be used to change uart properties for other modbus devices
 
-    PZPort_cfg (uart_port_t _p=PZEM_UART, int _rx=UART_PIN_NO_CHANGE, int _tx=UART_PIN_NO_CHANGE, uint8_t _id = 0, const char *_name=nullptr) :
-        p(_p), gpio_rx(_rx), gpio_tx(_tx), id(_id) {
-            uartcfg = {     // default values for PZEMv30
+    PZPort_cfg (uart_port_t _p=PZEM_UART, int _rx=UART_PIN_NO_CHANGE, int _tx=UART_PIN_NO_CHANGE, uint8_t _id = 0, const char *_name=nullptr,
+                uart_config_t ucfg =  {     // default values for PZEMv30
                 .baud_rate = PZEM_BAUD_RATE,
                 .data_bits = UART_DATA_8_BITS,
                 .parity = UART_PARITY_DISABLE,
                 .stop_bits = UART_STOP_BITS_1,
-                .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
-            };
+                .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+                .rx_flow_ctrl_thresh = 0
+            }
+        ) : p(_p), gpio_rx(_rx), gpio_tx(_tx), id(_id), uartcfg(ucfg) {
             if (!_name || !*_name){
                 descr = std::unique_ptr<char[]>(new char[9]);
                 sprintf(descr.get(), "Port-%d", _id);
@@ -151,12 +152,13 @@ public:
     UartQ(const uart_port_t p, const uart_config_t cfg, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){ init(cfg, gpio_rx, gpio_tx); }
 
     UartQ(const uart_port_t p, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){
-        uart_config_t uartcfg = {     // default values for PZEMv30
+        uart_config_t uartcfg = {     // default values for PZEM004v30
             .baud_rate = PZEM_BAUD_RATE,
             .data_bits = UART_DATA_8_BITS,
             .parity = UART_PARITY_DISABLE,
             .stop_bits = UART_STOP_BITS_1,
-            .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+            .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+            .rx_flow_ctrl_thresh = 0
         };
 
         init(uartcfg, gpio_rx, gpio_tx);
@@ -389,8 +391,10 @@ private:
 
                 // if smg would expect a reply than I need to grab a semaphore from the RX queue task
                 if (msg->w4rx){
+                    ESP_LOGD(TAG, "Wait for tx semaphore, t: %lld", esp_timer_get_time()/1000);
                     xSemaphoreTake(rts_sem, pdMS_TO_TICKS(PZEM_UART_TIMEOUT));
-                    uart_flush_input(port);     // input should be cleared from any leftovers if I expect a reply
+                    // an old reply migh be still in the rx queue while I'm handling this one
+                    //uart_flush_input(port);     // input should be cleared from any leftovers if I expect a reply (in case of a timeout only)
                     //xQueueReset(rx_evt_queue);
                 }
 
@@ -398,7 +402,7 @@ private:
                 uart_write_bytes(port, (const char*)msg->data, msg->len);
 
                 #ifdef PZEM_EDL_DEBUG
-                    ESP_LOGD(TAG, "PZEM TX packet sent to uart FIFO, t: %ld", esp_timer_get_time()/1000);
+                    ESP_LOGD(TAG, "TX - packet sent to uart FIFO, t: %ld", esp_timer_get_time()/1000);
                     tx_msg_debug(msg);
                 #endif
 
