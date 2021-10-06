@@ -57,7 +57,7 @@ void setup(){
     // OR we can map port to any custom pins
     qport = new UartQ(PZEM_UART_PORT, RX_PIN, TX_PIN);      // or use custom pins
 
-    // Now let's create a PZEM object
+    // Now let's create a PZEM004 object
     pz = new PZ004(PZEM_ID);
 
     // and link our port with PZEM object
@@ -71,7 +71,9 @@ void setup(){
     pz->updateMetrics();
 
     // and try to check the voltage value
-    Serial.printf("PZEM voltage: %d (decivolts)\n", pz->getMetrics().voltage);
+    auto *m = pz->getMetricsPZ004();    // obtain a pointer to objects metrics
+
+    Serial.printf("PZEM voltage: %d (decivolts)\n", m->voltage);
 
     /*
        But, hey! Wait a minute! Why the voltage value printed in console is ZERO?
@@ -88,17 +90,16 @@ void setup(){
     delay(200);     // for 200 ms
 
     // now we should have some response with updated values, let's check again
-    Serial.printf("PZEM voltage: %d (decivolts)\n", pz->getMetrics().voltage);
+    Serial.printf("PZEM voltage: %d (decivolts)\n", m->voltage);
 
     // and find how long ago we had a reply came back while we were sleeping
-    Serial.printf("PZEM data has been updated %lld ms ago\n", pz->getState().dataAge());
+    Serial.printf("PZEM data has been updated %lld ms ago\n", pz->getState()->dataAge());
 
     // let's check other metrics
-    Serial.printf("PZEM current: %u (mA)\n", pz->getMetrics().current);
+    Serial.printf("PZEM current: %u (mA)\n", m->current);
 
     // Or if someone likes floats instead? (I don't)
-    Serial.printf("PZEM current as float: %.3f (Amps)\n", pz->getMetrics().asFloat(meter_t::cur));      // allowed arguments are in enum meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm }
-
+    Serial.printf("PZEM current as float: %.3f (Amps)\n", m->asFloat(pzmbus::meter_t::cur));      // allowed arguments are in enum meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm }
 
     /*
         OK, you may not like this updateMetrics(), than wait, than get values approach in the code, right?
@@ -126,7 +127,7 @@ void setup(){
 
         Serial.println("Wake up!");
 
-        Serial.printf("PZEM voltage: %d (decivolts), last update time %lld ms ago\n\n", pz->getMetrics().voltage, pz->getState().dataAge());
+        Serial.printf("PZEM voltage: %d (decivolts), last update time %lld ms ago\n\n", m->voltage, pz->getState()->dataAge());
    } while(--times);
 
     // Cool, huh? :)
@@ -173,13 +174,13 @@ void loop(){
  */
 void mycallback(uint8_t id, const RX_msg* m){
 
-// Here I can get the id of PZEM (might get handy if have more than one attached)
+    // I can get the id of PZEM (might get handy if have more than one attached)
     Serial.printf("\nCallback triggered for PZEM ID: %d\n", id);
 
 /*
-    Here it is possible to obtain a fresh new data same way as before
+    It is possible to obtain a fresh new data same way as before
 
-    Serial.printf("PZEM current as float: %.3f (Amps)\n", pz->getMetrics().asFloat(meter_t::cur));
+    Serial.printf("PZEM current as float: %.3f (Amps)\n", pz->getMetricsPZ004()->asFloat(pzmbus::meter_t::cur));
 */
 
 /*

@@ -12,12 +12,16 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 
 #include "main.h"
-using namespace pzmbus;     // Use generic PZEM namespace
+using namespace pzmbus;     // use general pzem abstractions
 
 /*
-    This is a small sketch that shows how to run multiple PZEM004 instances over one serial ports:
+    This is a small sketch that shows how to run multiple PZEM instances over two serial ports:
 
-    PreSteps
+    A setup consists of:
+     - 3 PZEM004 devices attached to UART_NUM_1 and monitoring AC lines
+     - 2 PZEM003 devices attached to UART_NUM_2 and monitoring DC lines
+
+    Pre Steps
         - each PZEM device must be configured with a unique MODBUS address prior to attaching it to the shared serial lines.
         - check 'pzem_cli' example for an easy way to read/modify PZEM address
         - check 01_SinglePZEM example to get the idea of basic operations
@@ -30,35 +34,50 @@ using namespace pzmbus;     // Use generic PZEM namespace
      - use call-backs
 
 
-    1. Connect several PZEM devices to ESP32's UART port using default or any other custom pins
+    1. Connect several PZEM devices to ESP32's UART port(s) using default or any other custom pins
     2. Build the sketch and use some terminal programm like platformio's devmon, putty or Arduino IDE to check for sketch output
 
  */
+
 #define PZEM_UART_PORT_1   UART_NUM_1     // port attached to pzem (UART_NUM_1 is 2-nd uart port on ESP32, 1-st one is usually busy with USB-to-serial chip)
+#define PZEM_UART_PORT_2   UART_NUM_2     // assume we use 2 ports
 
-#define PORT_1_ID   10      // an ID for port instance
+#define PORT_1_ID   10      // an ID for port 1
+#define PORT_2_ID   20      // an ID for port 2
 
 
-#define RX_PIN 22           // custom RX pin number
-#define TX_PIN 19           // custom TX pin number
+#define RX_PIN 22           // custom RX pin number for port 1
+#define TX_PIN 19           // custom TX pin number for port 1
 
+// those are IDs for AC lines
 #define PZEM_ID_1 42        // this is a unique PZEM ID just for reference, it is NOT slave MODBUS address, just some random id
 #define PZEM_ID_2 43        // (we all know why '42' is THE number, right? :) )
 #define PZEM_ID_3 44
 
-// those are PZEM modbus addresses, must be programmed into PZEM in advance! (use pzem_cli tool to do this)
+
+// those are IDs for DC lines
+#define PZEM_ID_4 50
+#define PZEM_ID_5 51
+
+// those are PZEM004 modbus addresses, must be programmed into PZEM in advance! (use pzem_cli tool to do this)
 #define PZEM_1_ADDR 10
 #define PZEM_2_ADDR 11
 #define PZEM_3_ADDR 12
+
+// those are PZEM003 modbus addresses, must be programmed into PZEM in advance! (use pzem_cli tool to do this)
+#define PZEM_4_ADDR 24
+#define PZEM_5_ADDR 25
 
 
 /*
   Let's set a pool of two ports and 5 PZEM devices
 
-  Port one has 3 PZEM's
+  Port one has 3 PZEM's for AC lines
+  Port two has 2 PZEM's for DC lines
 
   We will also give it some fancy names
 */
+
 
 
 // We'll need a placeholder for PZPool object
@@ -75,6 +94,7 @@ void setup(){
     // now we must set UART ports
 
     // for port object we need a config struct
+    // this describes port_1 for AC PZEMs
     auto port1_cfg = PZPort_cfg(PZEM_UART_PORT_1,   // uart number
                                 RX_PIN,             // rx pin remapped
                                 TX_PIN,             // tx pin remapped
@@ -89,13 +109,33 @@ void setup(){
         Serial.printf("ERR: Can't add port id:%d\n", PORT_1_ID);
     }
 
+
+    // and another port for attaching to PZEM003 DC lines
+    auto port2_cfg = PZPort_cfg(PZEM_UART_PORT_2,
+                                UART_PIN_NO_CHANGE,   // using default pins, no remapping
+                                UART_PIN_NO_CHANGE,   // using default pins, no remapping
+                                PORT_2_ID,
+                                "DC_lines");
+
+    // PZEM003 requires custom config for serial port
+    port2_cfg.uartcfg.stop_bits  = UART_STOP_BITS_2;          // PZEM003 need 2 stop bits
+
+
+    // Ask PZPool object to create a PortQ object based on config provided
+    // it will automatically start event queues for the port and makes it available for PZEM assignment
+    if (meters->addPort(port2_cfg)){
+        Serial.printf("Added port id:%d\n", PORT_2_ID);
+    } else {
+        Serial.printf("ERR: Can't add port id:%d\n", PORT_2_ID);
+    }
+
     /* Now, we create PZEM instances one by one attaching it to the corresponding Port IDs
         each PZEM instance must have:
         - unique ID within a pool
         - unique modbus address per port, different ports are allowed to have PZEM's with same address
         - an existing port id to attach to
     */
-    // port_1 devs
+    // port_1 devs - AC lines
     if (meters->addPZEM(PORT_1_ID, PZEM_ID_1, PZEM_1_ADDR, pzmodel_t::pzem004v3, "Phase_1"))
         Serial.printf("Added PZEM id:%d addr:%d, port id:%d\n", PZEM_ID_1, PZEM_1_ADDR, PZEM_UART_PORT_1);
 
@@ -104,6 +144,13 @@ void setup(){
 
     if (meters->addPZEM(PORT_1_ID, PZEM_ID_3, PZEM_3_ADDR, pzmodel_t::pzem004v3, "Phase_3"))
         Serial.printf("Added PZEM id:%d addr:%d, port id:%d\n", PZEM_ID_3, PZEM_3_ADDR, PZEM_UART_PORT_1);
+
+    // port_2 devs - DC lines
+    if (meters->addPZEM(PORT_2_ID, PZEM_ID_4, PZEM_4_ADDR, pzmodel_t::pzem003, "Solar Panel"))
+        Serial.printf("Added PZEM id:%d addr:%d, port id:%d\n", PZEM_ID_4, PZEM_4_ADDR, PZEM_UART_PORT_2);
+
+    if (meters->addPZEM(PORT_2_ID, PZEM_ID_5, PZEM_5_ADDR, pzmodel_t::pzem003, "Accu's"))
+        Serial.printf("Added PZEM id:%d addr:%d, port id:%d\n", PZEM_ID_5, PZEM_5_ADDR, PZEM_UART_PORT_2);
 
     // now it is all ready to exchange data with PZEMs
     // check 'Single PZEM' example for detailed description
@@ -117,12 +164,24 @@ void setup(){
     // Let's check our 'Phase_1's power
 
     // obtain a reference to Metrics structure of a specific PZEM instance,
-    // it is required to cast it to structure for the specific model
-    const auto *m =(const pz004::metrics*)meters->getMetrics(PZEM_ID_1);
+    // it is reuired to cast it to structure for the specific model
+    const auto *m1 =(const pz004::metrics*)meters->getMetrics(PZEM_ID_1);
 
-    if (m){ // sanity check - make sure that a requested PZEM ID is valid and we have a real struct reference
-        Serial.printf("Power value for '%s' is %f watts\n", meters->getDescr(PZEM_ID_1), m->asFloat(meter_t::pwr));
+    if (m1){ // sanity check - make sure that a requested PZEM ID is valid and we have a real struct reference
+        Serial.printf("Power value for '%s' is %f watts\n", meters->getDescr(PZEM_ID_1), m1->asFloat(meter_t::pwr));
     }
+
+
+    // Let's check our solar panels voltage
+
+    // obtain a reference to Metrics structure of a specific PZEM instance,
+    // it is reuired to cast it to structure for the specific model
+    const auto *m4 =(const pz003::metrics*)meters->getMetrics(PZEM_ID_4);
+
+    if (m4){ // sanity check - make sure that a requested PZEM ID is valid and we have a real struct reference
+        Serial.printf("Voltage for '%s' is %d volts\n", meters->getDescr(PZEM_ID_1), m4->voltage);
+    }
+
 
     //    Run autopollig in background for all devs in pool
     if (meters->autopoll(true)){
@@ -171,25 +230,37 @@ void loop(){
  * @param m - this will be the struct with PZEM data (not only metrics, but any one)
  */
 void mycallback(uint8_t id, const RX_msg* m){
-
-// Here I can get the id of PZEM (might get handy if have more than one attached)
-   Serial.printf("\nTime: %ld / Heap: %d - Callback triggered for PZEM ID: %d, name: %s\n", millis(), ESP.getFreeHeap(), id,  meters->getDescr(id));
+    Serial.printf("\nTime: %ld / Heap: %d - Callback triggered for PZEM ID: %d, name: %s\n", millis(), ESP.getFreeHeap(), id,  meters->getDescr(id));
 
 /*
-    Here it is possible to obtain a fresh new data same way as before,
-    accessing metrics and state data via references
-
-    auto *m = (const pz004::metrics*)meters->getMetrics(PZEM_ID_2)
-    Serial.printf("PZEM '%s' current as float: %.3f (Amps)\n", meters->getDescr(PZEM_ID_2), m->asFloat(meter_t::cur));
+    Since we have mexed pool of PZEM devies, we need to find out wich device in particular we've got this message from,
+    than we can either use the packet data directly or access metrics struct for the specific PZEM instance 
 */
+    switch(meters->getState(id)->model) {
+        case pzmodel_t::pzem004v3 : {
+            pz004::rx_msg_prettyp(m);       // parse incoming message and print some nice info
 
-/*
-    It is also possible to work directly on a raw data from PZEM
-    let's call for a little help here and use a pretty_printer() function
-    that parses and prints RX_msg to the stdout
-*/
-    // since I gave only PZEM004 devices attached, I call pz004::rx_msg_prettyp() method
-    pz004::rx_msg_prettyp(m);
+            // or we can access struct data for the updated object (an example)
+            auto *s = (const pz004::state*)meters->getState(id);
+            Serial.printf("===\nPower alarm: %s\n", s->alarm ? "present" : "absent");
+            Serial.printf("Power factor: %d\n", s->data.pf);
+            Serial.printf("Current value: %f\n", s->data.asFloat(meter_t::cur));
+            break;
+        }
+        case pzmodel_t::pzem003 : {
+            pz003::rx_msg_prettyp(m);       // parse incoming message and print some nice info
+
+            // or we can access struct data for the updated object
+            auto *s = (const pz003::state*)meters->getState(id);
+            Serial.printf("===\nPower high alarm: %s\n", s->alarmh ? "present" : "absent");
+            Serial.printf("Power low alarm: %s\n", s->alarml ? "present" : "absent");
+            Serial.printf("Energy: %d\n", s->data.energy);
+            Serial.printf("Current value: %f\n", s->data.asFloat(meter_t::cur));
+            break;
+        }
+        default:
+            break;
+    }
 
     // that's the end of a callback
 }
