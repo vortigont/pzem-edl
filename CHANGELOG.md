@@ -1,3 +1,5 @@
+ - a pool class could manage mixed pzem device types simultaneously
+ - support for PZEM003
  - building under esp-idf
  - pzem_cli - added 'energy reset', 'alarm get/set' features
  - examples for Sigle/Multiple PZEMs

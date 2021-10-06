@@ -18,8 +18,8 @@ Feel free to open a discussion topic on any questions.
  * no loop() hooks, loop blocking, etc... actually no loop-dependend code at all
  * background auto-polling driven by RTOS timers
  * event/callback API for user-code hooks
- * Class objects for managing single device/port instance
- * or Pool of multiple PZEM devices groupped on single/multiple Serial port(s)
+ * Class objects for managing single device/port instances
+ * PZPool to handle multiple PZEM devices of different types groupped on single/multiple Serial port(s)
  * [pzem_cli](/examples/pzem_cli) - a small sketch to interact with pzem via terminal cli
 
 
