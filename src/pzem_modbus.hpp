@@ -24,7 +24,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define REG_ENERGY_H            0x0006
 #define REG_FREQUENCY           0x0007  // 1LSB correspond to 0.1 Hz
 #define REG_PF                  0x0008  // 1LSB correspond to 0.01
-#define REG_ALARM               0x0009  // 0xFFFF is alarm / 0x0000 is not alarm
+#define REG_ALARM_H             0x0009  // 0xFFFF is alarm / 0x0000 is not alarm
 #define REG_METER_DATA_START    REG_VOLTAGE
 #define REG_METER_DATA_LEN      0x0A
 #define REG_METER_RESP_LEN      0x14
@@ -98,8 +98,19 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 // ESP32 is little endian here
 
+/**
+ * @brief generic PZEM modbus abstractions
+ * 
+ */
 namespace pzmbus {
 
+// Enumeration of PZEM models supported
+enum class pzmodel_t:uint8_t { none, pzem004v3, pzem003 };
+
+/**
+ * @brief available modbus commands required to talk to pzem
+ * 
+ */
 enum class pzemcmd_t:uint8_t {
     RHR = CMD_RHR,
     RIR = CMD_RIR,
@@ -112,6 +123,9 @@ enum class pzemcmd_t:uint8_t {
     reset_err = CMD_RSTERR
 };
 
+// Enumeration of available electricity metrics
+enum class meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrmh, alrml };
+
 // Some of the possible Error states
 enum class pzem_err_t:uint8_t {
     err_ok = 0,
@@ -121,6 +135,58 @@ enum class pzem_err_t:uint8_t {
     err_slave = ERR_SLAVE,
     err_parse                   // error parsing reply
 };
+
+// Abstract structure with metrics
+struct metrics {
+    virtual float asFloat(meter_t m) const { return NAN; }
+    virtual bool parse_rx_msg(const RX_msg *m){ return false; }
+};
+
+
+struct state {
+    const pzmodel_t model;      // state struct relates to specific pzem mddel
+    uint8_t addr = ADDR_ANY;
+    pzmbus::pzem_err_t err;
+    int64_t poll_us=0;     // last poll request sent time, microseconds since boot
+    int64_t update_us=0;   // last succes update time, us since boot
+    metrics data;          // default metrics struct, does nothing actually
+
+    // C-tor
+    state (pzmodel_t m = pzmodel_t::none) : model(m){}
+
+    /**
+     * @brief return age time since last update in ms
+     * 
+     * @return int64_t age time in ms
+     */
+    int64_t dataAge() const { return (esp_timer_get_time() - update_us)/1000; }
+
+    /**
+     * @brief update poll_us to current value
+     * should be called on each request set to PZEM
+     * 
+     */
+    void reset_poll_us(){ poll_us=esp_timer_get_time(); }
+
+    /**
+     * @brief data considered stale if last update time is more than PZEM_REFRESH_PERIOD
+     * 
+     * @return true if stale
+     * @return false if data is fresh and valid
+     */
+    bool dataStale() const {return (esp_timer_get_time() - update_us > PZEM_REFRESH_PERIOD );}
+
+    /**
+     * @brief try to parse PZEM reply packet and update state structure
+     * 
+     * @param m RX message struct
+     * @param skiponbad try to parse even if packet has wrong MODBUS addr or has bad CRC
+     * @return true on success
+     * @return false on error
+     */
+    virtual bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true){return false;};
+};
+
 
 /**
  * @brief Create a msg object with PZEM command wrapped into proper MODBUS message
@@ -154,13 +220,11 @@ TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
 
 }   // end of 'namespace pzmbus'
 
+/**
+ * @brief implementation for model PZEM004tv30
+ * 
+ */
 namespace pz004 {
-
-// Enumeration of available energy metrics
-enum class meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm };
-
-// Enumeration of available MODBUS commands
-
 
 /**
  * @brief struct with energy metrics data
@@ -168,7 +232,7 @@ enum class meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm };
  * 
  * this struct is nicely 32-bit aligned :)
  */
-struct metrics {
+struct metrics : pzmbus::metrics {
     uint16_t voltage=0;
     uint32_t current=0;
     uint32_t power=0;
@@ -177,28 +241,28 @@ struct metrics {
     uint16_t pf=0;
     uint16_t alarm=0;
 
-    float asFloat(meter_t m) const {
+    float asFloat(pzmbus::meter_t m) const override {
         switch (m)
         {
-        case meter_t::vol :
+        case pzmbus::meter_t::vol :
             return voltage / 10.0;
             break;
-        case meter_t::cur :
+        case pzmbus::meter_t::cur :
             return current / 1000.0;
             break;
-        case meter_t::pwr :
+        case pzmbus::meter_t::pwr :
             return power / 10.0;
             break;
-        case meter_t::enrg :
+        case pzmbus::meter_t::enrg :
             return static_cast< float >(energy);
             break;
-        case meter_t::frq :
+        case pzmbus::meter_t::frq :
             return freq / 10.0;
             break;
-        case meter_t::pf :
+        case pzmbus::meter_t::pf :
             return pf / 100.0;
             break;
-        case meter_t::alrm :
+        case pzmbus::meter_t::alrmh :
             return alarm ? 1.0 : 0.0;
             break;
         default:
@@ -206,9 +270,10 @@ struct metrics {
         }
     }
 
-    bool parse_rx_msg(const RX_msg *m){
+    bool parse_rx_msg(const RX_msg *m) override {
         if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != REG_METER_RESP_LEN)
             return false;
+        ESP_LOGD(TAG, "PZ004 RXparser\n");
 
         uint8_t const *value = &m->rawdata[3];
 
@@ -218,45 +283,22 @@ struct metrics {
         energy  = __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_H*2]   << 16);
         freq    = __builtin_bswap16(*(uint16_t*)&value[REG_FREQUENCY*2]);
         pf      = __builtin_bswap16(*(uint16_t*)&value[REG_PF*2]);
-        alarm   = __builtin_bswap16(*(uint16_t*)&value[REG_ALARM*2]);
+        alarm   = __builtin_bswap16(*(uint16_t*)&value[REG_ALARM_H*2]);
         return true;
     }
 };
 
 /**
- * @brief a structure that reflects PZEM state/data values
+ * @brief a structure that reflects PZEM004tv30 state/data values
  * 
  */
-struct pzem_state {
-    uint8_t addr = ADDR_ANY;
+struct state : pzmbus::state {
     metrics data;
     uint16_t alrm_thrsh=0;
     bool alarm=false;
-    pzmbus::pzem_err_t err;
-    int64_t poll_us=0;     // last poll request sent time, microseconds since boot
-    int64_t update_us=0;   // last succes update time, us since boot
 
-    /**
-     * @brief return age time since last update in ms
-     * 
-     * @return int64_t age time in ms
-     */
-    int64_t dataAge() const { return (esp_timer_get_time() - update_us)/1000; }
-
-    /**
-     * @brief update poll_us to current value
-     * should be called on each request set to PZEM
-     * 
-     */
-    void reset_poll_us(){ poll_us=esp_timer_get_time(); }
-
-    /**
-     * @brief data considered stale if last update time is more than PZEM_REFRESH_PERIOD
-     * 
-     * @return true if stale
-     * @return false if data is fresh and valid
-     */
-    bool dataStale() const {return (esp_timer_get_time() - update_us > PZEM_REFRESH_PERIOD );}
+    // C-tor - specify pzem model to base struct
+    state () : pzmbus::state(pzmbus::pzmodel_t::pzem004v3) {}
 
     /**
      * @brief try to parse PZEM reply packet and update structure state
@@ -266,7 +308,7 @@ struct pzem_state {
      * @return true on success
      * @return false on error
      */
-    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true){
+    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override {
         if (!m->valid && skiponbad)          // check if message is valid before parsing it further
             return false;
 
@@ -396,13 +438,10 @@ void rx_msg_prettyp(const RX_msg *m);
 // Implementation for PZEM003
 namespace pz003 {
 
-// Enumeration of available energy metrics
-enum class meter_t:uint8_t { vol, cur, pwr, enrg, alrmh, alrml };
-
 // Enumeration of available MODBUS commands
 enum class shunt_t:uint8_t {
     type_100A = 0,
-    type_50A = 1,
+    type_50A  = 1,
     type_200A = 2,
     type_300A = 3
 };
@@ -413,7 +452,7 @@ enum class shunt_t:uint8_t {
  * 
  * this struct is nicely 32-bit aligned :)
  */
-struct metrics {
+struct metrics : pzmbus::metrics {
     uint16_t voltage=0;
     uint16_t current=0;
     uint32_t power=0;
@@ -421,24 +460,24 @@ struct metrics {
     uint16_t alarmh=0;
     uint16_t alarml=0;
 
-    float asFloat(meter_t m) const {
+    float asFloat(pzmbus::meter_t m) const override {
         switch (m){
-        case meter_t::vol :
+        case pzmbus::meter_t::vol :
             return voltage / 100.0;
             break;
-        case meter_t::cur :
+        case pzmbus::meter_t::cur :
             return current / 100.0;
             break;
-        case meter_t::pwr :
+        case pzmbus::meter_t::pwr :
             return power / 10.0;
             break;
-        case meter_t::enrg :
+        case pzmbus::meter_t::enrg :
             return static_cast< float >(energy);
             break;
-        case meter_t::alrmh :
+        case pzmbus::meter_t::alrmh :
             return alarmh ? 1.0 : 0.0;
             break;
-        case meter_t::alrml :
+        case pzmbus::meter_t::alrml :
             return alarml ? 1.0 : 0.0;
             break;
         default:
@@ -446,7 +485,7 @@ struct metrics {
         }
     }
 
-    bool parse_rx_msg(const RX_msg *m){
+    bool parse_rx_msg(const RX_msg *m) override {
         if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != PZ003_RIR_RESP_LEN)
             return false;
 
@@ -466,39 +505,16 @@ struct metrics {
  * @brief a structure that reflects PZEM state/data values
  * 
  */
-struct pzem_state {
-    uint8_t addr = ADDR_ANY;
+struct state : pzmbus::state {
     metrics data;
     uint16_t alrmh_thrsh=0;
     uint16_t alrml_thrsh=0;
     bool alarmh=false;
     bool alarml=false;
     uint8_t irange = 0;     // 100A shunt
-    pzmbus::pzem_err_t err;
-    int64_t poll_us=0;     // last poll request sent time, microseconds since boot
-    int64_t update_us=0;   // last succes update time, us since boot
 
-    /**
-     * @brief return age time since last update in ms
-     * 
-     * @return int64_t age time in ms
-     */
-    int64_t dataAge() const { return (esp_timer_get_time() - update_us)/1000; }
-
-    /**
-     * @brief update poll_us to current value
-     * should be called on each request set to PZEM
-     * 
-     */
-    void reset_poll_us(){ poll_us=esp_timer_get_time(); }
-
-    /**
-     * @brief data considered stale if last update time is more than PZEM_REFRESH_PERIOD
-     * 
-     * @return true if stale
-     * @return false if data is fresh and valid
-     */
-    bool dataStale() const {return (esp_timer_get_time() - update_us > PZEM_REFRESH_PERIOD );}
+    // C-tor - specify pzem model to base struct
+    state () : pzmbus::state(pzmbus::pzmodel_t::pzem003) {}
 
     /**
      * @brief try to parse PZEM reply packet and update structure state
@@ -508,7 +524,7 @@ struct pzem_state {
      * @return true on success
      * @return false on error
      */
-    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true){
+    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override {
         if (!m->valid && skiponbad)          // check if message is valid before parsing it further
             return false;
 

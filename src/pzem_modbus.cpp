@@ -84,7 +84,7 @@ TX_msg* cmd_set_alarm_thr(uint16_t w, const uint8_t addr){
 TX_msg* cmd_energy_reset(const uint8_t addr){return pzmbus::cmd_energy_reset(addr);}
 
 void rx_msg_prettyp(const RX_msg *m){
-    pzem_state pz;
+    state pz;
 
     pz.parse_rx_mgs(m, false);
 
@@ -166,7 +166,7 @@ TX_msg* cmd_set_shunt(shunt_t shunt, const uint8_t addr){
 TX_msg* cmd_energy_reset(const uint8_t addr){return pzmbus::cmd_energy_reset(addr);}
 
 void rx_msg_prettyp(const RX_msg *m){
-    pzem_state pz;
+    state pz;
 
     pz.parse_rx_mgs(m, false);
 
@@ -208,6 +208,7 @@ void rx_msg_prettyp(const RX_msg *m){
                     printf("Unknown WSR value\n");
                     break;
             }
+            break;
         }
         case pzemcmd_t::reset_energy :
             printf("Energy counter reset!\n");
