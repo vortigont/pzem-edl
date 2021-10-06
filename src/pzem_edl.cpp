@@ -72,7 +72,7 @@ void PZEM::attach_rx_callback(rx_callback_t f){
     rx_callback = std::move(f);
 }
 
-bool PZEM::autopoll(){
+bool PZEM::autopoll() const {
     if (t_poller && xTimerIsTimerActive(t_poller) != pdFALSE)
         return true;
 
@@ -102,14 +102,14 @@ bool PZEM::autopoll(bool newstate){
     return false;   // last resort state
 }
 
-size_t PZEM::get_pollrate(){
+size_t PZEM::getPollrate() const {
     if (t_poller)
         return pdTICKS_TO_MS( xTimerGetPeriod( t_poller ));
 
     return 0;
 }
 
-bool PZEM::set_pollrate(size_t t){
+bool PZEM::setPollrate(size_t t){
     if (t<POLLER_MIN_PERIOD)
         return false;
 
@@ -210,28 +210,31 @@ bool PZPool::addPort(std::shared_ptr<PZPort> port){
 }
 
 // TODO: возвращать код ошибки
-bool PZPool::addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, const char *descr){
-    if(!port_by_id(port_id) || pzem_by_id(pzem_id))
-        return false;       // either port is missing or pzem with this id already exist
-
+bool PZPool::addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, pzmbus::pzmodel_t model, const char *descr){
     if (modbus_addr < ADDR_MIN || modbus_addr > ADDR_MAX)   // we do not want any broadcasters or wrong addresses in our pool
         return false;
 
-    auto p = port_by_id(port_id);
+    if(!port_by_id(port_id) || pzem_by_id(pzem_id))
+        return false;       // either port is missing or pzem with this id already exist
 
-    auto node = std::make_shared<PZNode>();
-    node->port = p;
-
-    auto pz = std::unique_ptr<PZ004>(new PZ004(pzem_id, modbus_addr, descr));     // create new PZEM object
-    pz->attachUartQ(node->port.get(), true);                                    // attach it to the specified PortQ (TX-only!)
-
-    node->pzem = std::move(pz);
-
-    return meters.add(node);
+    switch (model){
+        case pzmbus::pzmodel_t::pzem004v3 : {
+            auto pz = std::unique_ptr<PZEM>(new PZ004(pzem_id, modbus_addr, descr));     // create new PZEM object
+            return addPZEM(port_id, pz.get());
+            break;
+        }
+        case pzmbus::pzmodel_t::pzem003 : {
+            auto pz = std::unique_ptr<PZEM>(new PZ003(pzem_id, modbus_addr, descr));     // create new PZEM object
+            return addPZEM(port_id, pz.get());
+            break;
+        }
+        default:
+            return false;
+    }
 };
 
 // TODO: возвращать код ошибки
-bool PZPool::addPZEM(const uint8_t port_id, PZ004 *pz){
+bool PZPool::addPZEM(const uint8_t port_id, PZEM *pz){
 
     // reject objects with catch-all or invalid address
     if (pz->getaddr() < ADDR_MIN || pz->getaddr() > ADDR_MAX)
@@ -243,6 +246,9 @@ bool PZPool::addPZEM(const uint8_t port_id, PZ004 *pz){
 
     auto node = std::make_shared<PZNode>();
     node->port = p;
+
+    // detach existing rx call-back (if any)
+    pz->detach_rx_callback();
 
     // detach existing port (if any)
     pz->detachUartQ();
@@ -306,17 +312,26 @@ std::shared_ptr<PZPort> PZPool::port_by_id(uint8_t id){
     return nullptr;
 }
 
-PZ004* PZPool::pzem_by_id(uint8_t id){
-    for (auto i : meters){
+const PZEM* PZPool::pzem_by_id(uint8_t id) const {
+    for (auto _i = meters.cbegin(); _i != meters.cend(); ++_i){
+        const auto i = *_i;
         if (i->pzem->id == id)
             return i->pzem.get();
-   }
+    }
+/*
+    // auto discards const qualifiers
+    const auto &m = meters;
+    for (const auto &i : m){
+        if (i->pzem->id == id)
+            return i->pzem.get();
+    }
+*/
 
     return nullptr;
 }
 
 
-bool PZPool::autopoll(){
+bool PZPool::autopoll() const {
     if (t_poller && xTimerIsTimerActive(t_poller) != pdFALSE)
         return true;
 
@@ -346,14 +361,14 @@ bool PZPool::autopoll(bool newstate){
     return false;   // last resort state
 }
 
-size_t PZPool::get_pollrate(){
+size_t PZPool::getPollrate() const {
     if (t_poller)
         return pdTICKS_TO_MS( xTimerGetPeriod( t_poller ));
 
     return 0;
 }
 
-bool PZPool::set_pollrate(size_t t){
+bool PZPool::setPollrate(size_t t){
     if (t<POLLER_MIN_PERIOD)
         return false;
 
@@ -369,7 +384,7 @@ void PZPool::attach_rx_callback(rx_callback_t f){
     rx_callback = std::move(f);
 }
 
-const char* PZPool::getDescr(uint8_t id){
+const char* PZPool::getDescr(uint8_t id) const {
     const PZEM* p = pzem_by_id(id);
     if (p){
         return p->getDescr();
@@ -377,3 +392,21 @@ const char* PZPool::getDescr(uint8_t id){
     
     return nullptr;
 };
+
+const pzmbus::state* PZPool::getState(uint8_t id) const {
+    const auto *pz = pzem_by_id(id);
+
+    if (pz)
+        return pz->getState();
+
+    return nullptr;
+};
+
+const pzmbus::metrics* PZPool::getMetrics(uint8_t id) const {
+    const auto *pz = pzem_by_id(id);
+
+    if (pz)
+        return pz->getMetrics();
+
+    return nullptr;
+}

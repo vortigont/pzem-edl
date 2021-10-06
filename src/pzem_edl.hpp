@@ -24,7 +24,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 typedef std::function<void (uint8_t id, const RX_msg*)> rx_callback_t;
 
 /**
- * @brief - PowerMeter instance class
+ * @brief - PowerMeter abstract instance class
  * Helds an object of one PZEM instance along with it's properties
  */
 class PZEM {
@@ -43,7 +43,6 @@ public:
      * Class constructor
      */
     PZEM(const uint8_t _id, const char *_descr=nullptr) : id(_id) {
-        //pz.addr = modbus_addr;
         if (!_descr || !*_descr){
             descr.reset(new char[9]);   // i.e. PZEM-123
             sprintf(descr.get(), "PZEM-%d", id);
@@ -62,7 +61,7 @@ public:
      * @brief return configured MODBUS address
      * 
      */
-    virtual uint8_t getaddr(){ return ADDR_ANY; }
+    virtual uint8_t getaddr() const { return ADDR_ANY; }
 
     /**
      * @brief attach to UartQ object which provides queues for message exchange
@@ -81,7 +80,7 @@ public:
      * 
      * @param msg 
      */
-    virtual void rx_sink(const RX_msg *msg){};
+    virtual void rx_sink(const RX_msg *msg) = 0;      // pure virtual method, must be redefined in derived classes
 
     /**
      * @brief detach IO queues
@@ -107,7 +106,7 @@ public:
      * on call a mesage with metrics request is send to PZEM device
      * should be overriden in a derived class
      */
-    virtual void updateMetrics(){};
+    virtual void updateMetrics() = 0;                 // pure virtual method, must be redefined in derived classes
 
     /**
      * @brief return description string as 'const char*'
@@ -120,7 +119,7 @@ public:
      * @brief get auto-poll timer state - active/disabled
      * 
      */
-    bool autopoll();
+    bool autopoll() const;
 
     /**
      * @brief set auto-poll timer state
@@ -134,7 +133,7 @@ public:
      * 
      * @return size_t poll period in ms
      */
-    size_t get_pollrate();
+    size_t getPollrate() const;
     
     /**
      * @brief (Re)Set pollrate in ms
@@ -149,7 +148,22 @@ public:
      * @return true if change successfull
      * @return false otherwise
      */
-    bool set_pollrate(size_t t);
+    bool setPollrate(size_t t);
+
+    /**
+     * @brief Get the PZEM State object reference
+     * it contains all parameters and metrics for PZEM device
+     * 
+     * @return const pointer to pzmbus::state 
+     */
+    virtual const pzmbus::state* getState() const = 0;// const { return &pz; }
+
+    /**
+     * @brief Get the Metrics data structure
+     * 
+     * @return const pzmbus::metrics* 
+     */
+    virtual const pzmbus::metrics* getMetrics() const = 0; // const { return &pz.data; }
 
 
 private:
@@ -172,7 +186,7 @@ private:
  *
  */
 class PZ004 : public PZEM {
-    pz004::pzem_state pz;              // structure with PZEM004 state
+    pz004::state pz;              // structure with PZEM004 state
 
 public:
     // Derrived constructor
@@ -190,7 +204,7 @@ public:
      * @brief return configured MODBUS address
      * 
      */
-    uint8_t getaddr() override { return pz.addr; }
+    virtual uint8_t getaddr() const override { return pz.addr; }
 
     /**
      * @brief poll PZEM for metrics
@@ -202,16 +216,18 @@ public:
      * @brief Get the PZEM State object reference
      * it contains all parameters and metrics for PZEM device
      * 
-     * @return const pzmbus::pzem_state& 
+     * @return const pzmbus::state& 
      */
-    const pz004::pzem_state &getState() const { return pz; }
+    const pzmbus::state* getState() const override { return &pz; }
+    const pz004::state*  getStatePZ004() const { return &pz; }
 
     /**
      * @brief Get the PZEM Metrics object
      * it contains all electric metrics for PZEM device
      * @return const pzmbus::metrics&
      */
-    const pz004::metrics &getMetrics() const { return pz.data; }
+    const pzmbus::metrics* getMetrics() const override { return &pz.data; }
+    const pz004::metrics*  getMetricsPZ004() const { return &pz.data; }
 
     /**
      * @brief A sink for RX messages
@@ -229,7 +245,7 @@ public:
  *
  */
 class PZ003 : public PZEM {
-    pz003::pzem_state pz;              // structure with PZEM004 state
+    pz003::state pz;              // structure with PZEM004 state
 
 public:
     // Derrived constructor
@@ -247,7 +263,7 @@ public:
      * @brief return configured MODBUS address
      * 
      */
-    uint8_t getaddr() override { return pz.addr; }
+    uint8_t getaddr() const override { return pz.addr; }
 
     /**
      * @brief poll PZEM for metrics
@@ -266,16 +282,18 @@ public:
      * @brief Get the PZEM State object reference
      * it contains all parameters and metrics for PZEM device
      * 
-     * @return const pzmbus::pzem_state& 
+     * @return const pzmbus::state*
      */
-    const pz003::pzem_state &getState() const { return pz; }
+    const pzmbus::state* getState() const override { return &pz; }
+    const pz003::state*  getStatePZ003() const { return &pz; }
 
     /**
      * @brief Get the PZEM Metrics object
      * it contains all electric metrics for PZEM device
-     * @return const pzmbus::metrics&
+     * @return const pzmbus::metrics*
      */
-    const pz003::metrics &getMetrics() const { return pz.data; }
+    const pzmbus::metrics* getMetrics() const override { return &pz.data; }
+    const pz003::metrics*  getMetricsPZ003() const { return &pz.data; }
 
     /**
      * @brief A sink for RX messages
@@ -300,15 +318,14 @@ class PZPool {
      */
     struct PZNode {
         std::shared_ptr<PZPort> port;
-        std::unique_ptr<PZ004> pzem;
+        std::unique_ptr<PZEM> pzem;
     };
 
 protected:
     LList<std::shared_ptr<PZPort>> ports;                           // list of registered ports
     LList<std::shared_ptr<PZNode>> meters;                          // list of registered PZEM nodes
     std::shared_ptr<PZPort> port_by_id(uint8_t id);
-    //const std::shared_ptr<PZPort> port_by_id(uint8_t id) const;     // const overload
-    PZ004* pzem_by_id(uint8_t id);
+    const PZEM* pzem_by_id(uint8_t id) const;
 
 
 public:
@@ -349,8 +366,8 @@ public:
      * @return true   - on success
      * @return false  - on any error
      */
-    bool addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, const char *descr=nullptr);
-    bool addPZEM(const uint8_t port_id, PZ004 *pz);
+    bool addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, pzmbus::pzmodel_t model, const char *descr=nullptr);
+    bool addPZEM(const uint8_t port_id, PZEM *pz);
 
     /**
      * @brief check if the port with spefied id exist in a pool
@@ -394,7 +411,7 @@ public:
      * @brief get auto-poll timer state - active/disabled
      * 
      */
-    bool autopoll();
+    bool autopoll() const;
 
     /**
      * @brief set auto-poll timer state
@@ -408,7 +425,7 @@ public:
      * 
      * @return size_t poll period in ms
      */
-    size_t get_pollrate();
+    size_t getPollrate() const;
 
     /**
      * @brief (Re)Set pollrate in ms
@@ -423,7 +440,7 @@ public:
      * @return true if change successfull
      * @return false otherwise
      */
-    bool set_pollrate(size_t t);
+    bool setPollrate(size_t t);
 
     /**
      * @brief update metrics for all PZEM Nodes in a pool
@@ -437,9 +454,9 @@ public:
      * NOTE: It is an undefined behavior to call this method on a non-existing id!!!
      * use existPZEM() method to check if unsure
      * 
-     * @return const pzmbus::pzem_state&, nullptr if PZEM with specified id does not exist
+     * @return const pzmbus::state&, nullptr if PZEM with specified id does not exist
      */
-    const pz004::pzem_state &getState(uint8_t id){ return pzem_by_id(id)->getState(); };
+    const pzmbus::state* getState(uint8_t id) const;
 
     /**
      * @brief Get the PZEM Metrics object reference for PZEM with specific id
@@ -449,14 +466,14 @@ public:
      * 
      * @return const pzmbus::metrics&, nullptr if PZEM with specified id does not exist
      */
-    const pz004::metrics &getMetrics(uint8_t id){ return pzem_by_id(id)->getMetrics(); };
+    const pzmbus::metrics* getMetrics(uint8_t id) const;
 
     /**
      * @brief return description string as 'const char*'
      * 
      * @return const char* 
      */
-    const char* getDescr(uint8_t id);
+    const char* getDescr(uint8_t id) const;
 
 
 private:
