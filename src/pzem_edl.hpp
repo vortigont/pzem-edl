@@ -140,9 +140,9 @@ public:
      * NOTE: seems that PZEM has internal averaging period somewhat about ~1 second
      * so there is no reason to poll it at any higher rate - it just returns the same results each time
      * also there is no reason to reduce the default rate, polling is pretty cheap with this lib
-     * and you'll alway have fresh data
+     * and you'll always have fresh data. dataStale() method consider PZEM_REFRESH_PERIOD constant as 1 second.
      * The only case this could be required to reduce pollrate is to have more than a dozen PZEM's sharing same bus
-     * that could take over 1 sec to poll all of them one after another
+     * that could take over 1 sec to poll all of them one after another (need a feedback for such setups)
      * 
      * @param t rate in ms
      * @return true if change successfull
@@ -186,7 +186,7 @@ private:
  *
  */
 class PZ004 : public PZEM {
-    pz004::state pz;              // structure with PZEM004 state
+    pz004::state pz;                        // structure with PZEM004 state
 
 public:
     // Derrived constructor
@@ -334,6 +334,8 @@ public:
     // Copy semantics : not implemented
     PZPool(const PZPool&) = delete;
     PZPool& operator=(const PZPool&) = delete;
+
+
 
     /**
      * @brief create and register UART port to the Pool
