@@ -15,9 +15,9 @@ GitHub: https://github.com/vortigont/pzem-edl
 using namespace pzmbus;     // Use generic PZEM namespace
 
 /*
-    This is a small sketch that shows how to run multiple PZEM004 instances over one serial ports:
+    This is a small sketch that shows how to run multiple PZEM004 instances over a single serial port:
 
-    PreSteps
+    Pre Steps
         - each PZEM device must be configured with a unique MODBUS address prior to attaching it to the shared serial lines.
         - check 'pzem_cli' example for an easy way to read/modify PZEM address
         - check 01_SinglePZEM example to get the idea of basic operations
@@ -53,10 +53,7 @@ using namespace pzmbus;     // Use generic PZEM namespace
 
 
 /*
-  Let's set a pool of two ports and 5 PZEM devices
-
-  Port one has 3 PZEM's
-
+  Let's set a pool running one serial port and 3 PZEM devices
   We will also give it some fancy names
 */
 
@@ -72,7 +69,7 @@ void setup(){
     // create a new PZPool object
     meters = new PZPool();
 
-    // now we must set UART ports
+    // now we must set UART port
 
     // for port object we need a config struct
     auto port1_cfg = PZPort_cfg(PZEM_UART_PORT_1,   // uart number
@@ -108,7 +105,7 @@ void setup(){
     // now it is all ready to exchange data with PZEMs
     // check 'Single PZEM' example for detailed description
 
-    // let's update metrics for all devs
+    // let's update metrics for all devs at once
     meters->updateMetrics();
 
     // take some sleep while all devs are polled
@@ -131,7 +128,7 @@ void setup(){
         Serial.println("Sorry, can't autopoll somehow :(");
     }
 
-    // let's assign our callback to the PZPool instance.
+    // let's assign our callback to PZPool instance.
     // I'm using lambda here to provide functional callback
     meters->attach_rx_callback([](uint8_t pzid, const RX_msg* m){
 
@@ -146,9 +143,9 @@ void setup(){
     */
     meters->setPollrate(5000);    // 5 sec
 
-    // now I do not need to do anything
+    // I do not need to do anything else,
     // I can just halt here in an endless loop, but every second with a new message
-    // console will print metrics data from PZEM
+    // console will print metrics data from PZEMs
     for (;;){
         delay(1000);
     }
@@ -158,9 +155,7 @@ void setup(){
 
 void loop(){
     // we do not need this loop at all :)
-    for (;;){
-        delay(1000);
-    }
+    vTaskDelete(NULL);
 }
 
 

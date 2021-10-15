@@ -5,7 +5,7 @@ PZEM-EDL - Examples
 
 [Single PZEM003](/examples/02_SinglePZEM003) - An example for single PZEM003 device (DC 10/50/100/200/300 Amps meter)
 
-[MultiplePZEM004](/examples/03_MultiplePZEM004) - An example for a pool with Multiple PZEM004 devices on different ports
+[Multiple PZEM004](/examples/03_MultiplePZEM004) - An example for a pool with Multiple PZEM004 devices sharing single UART port
 
 [Mixed Pool](/examples/04_MixedPool) - A pool running a set of different PZEM models simultaneously, 3 PZEM004 measuring AC lines and two PZEM003 measuring DC lines.
 
