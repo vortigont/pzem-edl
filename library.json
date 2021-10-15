@@ -25,6 +25,12 @@
           "name": "LinkedList",
           "version": "https://github.com/vortigont/LinkedList"}
     ],
+    "build": [
+        {
+            "flags": "-std=gnu++14",
+            "unflags": "-std=gnu++11"
+        }
+    ],
     "export": {
         "include":
         [
