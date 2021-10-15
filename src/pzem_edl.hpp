@@ -15,6 +15,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 #include "pzem_modbus.hpp"
+#include "timeseries.hpp"
 #include "LList.h"
 
 #define POLLER_PERIOD       PZEM_REFRESH_PERIOD         // auto update period in ms
@@ -186,7 +187,7 @@ private:
  *
  */
 class PZ004 : public PZEM {
-    pz004::state pz;              // structure with PZEM004 state
+    pz004::state pz;                        // structure with PZEM004 state
 
 public:
     // Derrived constructor
@@ -199,6 +200,7 @@ public:
     // Copy semantics : not (yet) implemented
     PZ004(const PZ004&) = delete;
     PZ004& operator=(const PZ004&) = delete;
+    TimeSeries<pz004::metrics> *ts = nullptr;   // time series data placeholder
 
     /**
      * @brief return configured MODBUS address
@@ -334,6 +336,8 @@ public:
     // Copy semantics : not implemented
     PZPool(const PZPool&) = delete;
     PZPool& operator=(const PZPool&) = delete;
+
+
 
     /**
      * @brief create and register UART port to the Pool

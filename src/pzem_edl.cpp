@@ -134,6 +134,15 @@ void PZ004::updateMetrics(){
 
 void PZ004::rx_sink(const RX_msg *msg){
     if (pz.parse_rx_mgs(msg)){          // update meter state with new packet data (if valid)
+
+//
+        if (ts && !pz.dataStale()){
+//            ESP_LOGE(TAG, ".");
+            ts->put(pz.data, esp_timer_get_time() >> 20);
+            ESP_LOGD(TAG, "poll, t: %lld", esp_timer_get_time()>>20);
+
+        }
+//
         if (rx_callback)
             rx_callback(id, msg);       // run external call-back function
     }
