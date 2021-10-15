@@ -21,43 +21,40 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include <esp_heap_caps.h>
 #include <esp_spiram.h>
 
-#include <cstddef>
-#include <cstdint>
-#include <type_traits>
-#include <iterator>
+//#include <cstddef>
+//#include <cstdint>
+//#include <type_traits>
+//#include <iterator>
 
 // forward declarations
-//template <typename T>
-//struct ConstRingIterator;
-
-//template <typename T, bool IsConst>
-//struct RingIterator;
-
 template <typename T> class RingBuff;
 
-
+/**
+ * @brief Iterator class to traverse RingBuffer data
+ * Requires c++14 to build
+ * 
+ * @tparam T - RingBuffer data type
+ * @tparam Const - template key for const/non-const version
+ * 
+ * // quite a usefull discussion on iterrators https://stackoverflow.com/questions/2150192/how-to-avoid-code-duplication-implementing-const-and-non-const-iterators?rq=1
+ */
 template <typename T, bool Const = false>
 struct RingIterator {
     using iterator_category = std::forward_iterator_tag;
     using difference_type   = std::ptrdiff_t;
     using value_type        = T;
-    using pointer           = typename std::conditional<Const, T const *, T *>::type;
-    using reference         = typename std::conditional<Const, T const &, T &>::type;
-    //using pointer           = const T*;
-    //using reference         = const T&;
+    using pointer           = typename std::conditional_t<Const, T const *, T *>;
+    using reference         = typename std::conditional_t<Const, T const &, T &>;
 
-    using obj           = typename std::conditional<Const, RingBuff<T> const *, RingBuff<T> *>::type;
+    using container         = typename std::conditional_t<Const, RingBuff<T> const, RingBuff<T>>;
 
-
+    // c-tors
     RingIterator(const RingIterator&) = default;
 
     template<bool c = Const, class = std::enable_if_t<c>>
     RingIterator(const RingIterator<T, false>& rhs) : m_ptr(rhs.m_ptr), m_idx(rhs.m_idx) {}
 
-    //template< bool c = Const >
-//    RingIterator(RingBuff<T> *ptr, int idx) : m_ptr{ reinterpret_cast<pointer>(ptr) }, m_idx(idx) {}
-    //RingIterator(obj ptr, int idx) : m_ptr{ reinterpret_cast<obj>(ptr) }, m_idx(idx) {}
-    RingIterator(obj ptr, int idx) : m_ptr(ptr), m_idx(idx) {}
+    RingIterator(container *ptr, int idx) : m_ptr(ptr), m_idx(idx) {}
 
 
     // const
@@ -81,14 +78,15 @@ struct RingIterator {
     // Postfix increment
     RingIterator operator++(int) { RingIterator tmp = *this; ++(*this); return tmp; }
 
+    // Comparators
     bool operator== (const RingIterator& a) const { return (m_ptr == a.m_ptr && m_idx == a.m_idx); };
     bool operator!= (const RingIterator& a) const { return (m_ptr != a.m_ptr || m_idx != a.m_idx); };
-    //friend bool operator== (const ConstIterator& a, const ConstIterator& b) { return a.m_ctr == b.m_ctr; };
-    //friend bool operator!= (const ConstIterator& a, const ConstIterator& b) { return a.m_ctr != b.m_ctr; };
+    //friend bool operator== (const RingIterator& a, const RingIterator& b) { return a.m_ctr == b.m_ctr; };
+    //friend bool operator!= (const RingIterator& a, const RingIterator& b) { return a.m_ctr != b.m_ctr; };
 
     protected:
-        obj m_ptr;     // ringbuffer object pointer
-        int m_idx;              // offset from head
+        container *m_ptr;     // ringbuffer object pointer
+        int m_idx;           // offset from head
 };
 
 
@@ -109,13 +107,14 @@ class RingBuff {
     using Iterator = RingIterator<T, false>;
     using ConstIterator = RingIterator<T, true>;
 
-//    static_assert(std::is_trivially_copy_constructible<ConstIterator>::value);
+    // safety check for ConstIterator
+    static_assert(std::is_trivially_copy_constructible<ConstIterator>::value, "ConstIterator<> failed is_trivially_copy_constructible<> check");
 
     friend Iterator;
     friend ConstIterator;
 
 public:
-    const size_t capacity;          // capacity
+    const size_t capacity;          // max buffer capacity
 
     explicit RingBuff (size_t _s) :
         capacity(_s) {
@@ -134,93 +133,39 @@ public:
      * @brief reset buffer to initial state
      * no data changed actually, only iterators and pointers are invalided
      */
-    virtual void reset(){ head = 0; size = 0; };
+    void reset(){ head = 0; size = 0; };
 
     void push_back(const T &val);
 
     //T* pop_front(){};
 
-
-
 	// iterator methods
     auto cbegin() const { return ConstIterator(this, 0); }
 	auto cend()   const { return ConstIterator(this, size); }
 
-    //ConstIterator cbegin() const { return ConstIterator(*this, 0); }
-	//ConstIterator cend()   const { return ConstIterator(*this, size); }
-
 protected:
-	Iterator begin() { return Iterator(this, 0); }
-	Iterator end()   { return Iterator(this, size); }
+    // I do not want anyone to mess with data in a buff, so hiding mutable iterator for ancestors only
+	auto begin() { return Iterator(this, 0); }
+	auto end()   { return Iterator(this, size); }
 
 };
 
-
-
-
-/*
-template <typename T>
-struct ConstRingIterator {
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = T;
-    using pointer           = const T*;
-    using reference         = const T&;
-
-    using Iterator = MyIterator<false>;
-    using ConstIterator = MyIterator<true>;
-
-    ConstRingIterator(RingBuff<T> *ptr, int idx) : m_ptr(ptr), m_idx(idx) {}
-
-    const reference operator*()  const { return  m_ptr->data[(m_ptr->head + m_idx) % m_ptr->size]; }
-    const pointer   operator->() const { return &m_ptr->data[(m_ptr->head + m_idx) % m_ptr->size]; }
-
-    // Prefix increment
-    ConstRingIterator& operator++() { ++m_idx; return *this; }
-
-    // Postfix increment
-    ConstRingIterator operator++(int) { ConstRingIterator tmp = *this; ++(*this); return tmp; }
-
-    bool operator== (const ConstRingIterator& a) const { return (m_ptr == a.m_ptr && m_idx == a.m_idx); };
-    bool operator!= (const ConstRingIterator& a) const { return (m_ptr != a.m_ptr || m_idx != a.m_idx); };
-    //friend bool operator== (const ConstIterator& a, const ConstIterator& b) { return a.m_ctr == b.m_ctr; };
-    //friend bool operator!= (const ConstIterator& a, const ConstIterator& b) { return a.m_ctr != b.m_ctr; };
-
-    protected:
-        RingBuff<T> *m_ptr;     // ringbuffer object pointer
-        int m_idx;              // offset from head
-};
-
-template <typename T>
-struct RingIterator : ConstRingIterator<T> {
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = T;
-    using pointer           = T*;
-    using reference         = T&;
-
-    RingIterator(RingBuff<T> *ptr, int idx) : ConstRingIterator<T>(ptr, idx) {}
-
-    reference operator*()   { return  m_ptr->data[(m_ptr->head + m_idx) % m_ptr->size]; }
-    pointer   operator->()  { return &m_ptr->data[(m_ptr->head + m_idx) % m_ptr->size]; }
-};
-*/
 
 
 /**
  * @brief ring buffer container for time series data
- * 
+ * derives from a RingBuff class
  * 
  * @tparam T type of stored data 
  * @param _s - container size (number of elemens stored)
  * @param start_time - atomic timestamps (an increasing counter)
- *                      used to track missed data, could be provided as any timedata, i.e. millis(), micros(), epoch timestamp, etc...
+ *                     used to track missed data, could be provided as any time marks, i.e. millis(), micros(), epoch timestamp, etc...
  * @param period     - time series period, in units of time.
- *                      any intermediate samples (less than period time after previous) are skipped. (should be averaged, but not implemented yet)
+ *                     any intermediate samples (less than period time after previous) are skipped. (should be averaged, but not implemented yet)
  */
 template <typename T>
 class TimeSeries : public RingBuff<T> {
-    uint32_t tstamp;                                                // last update timestamp, atomic units
+    uint32_t tstamp;            // last update timestamp, atomic units
 
 public:
     const uint32_t interval;    // time interval between series, atomic units
@@ -228,9 +173,7 @@ public:
     explicit TimeSeries (size_t _s, uint32_t start_time, uint32_t period = 1) : RingBuff<T>(_s), tstamp(start_time), interval(period) {}
         
     /**
-     * @brief reset buffer to initial state
-     * set all elements of the buffet to default contructed T type,
-     * resets index to 0
+     * @brief reset buffer to empty state and set last update time mark
      * 
      * @param t - current starting point (timestamp) 
      */
@@ -238,16 +181,15 @@ public:
 
     /**
      * @brief put a new element into buffer
-     * 
+     * time mark is checked to validate insertion period
      * @param val - object of stored type T
      * @param time - timestamp for current value
-     * timestamp rollover for uint32_t is handled properly al long as interval between timestamps is consistent
+     * timestamp rollover for uint32_t is handled properly as long as interval between timestamps is consistent
      */
     void put(const T &val, uint32_t time);
 
     /**
      * @brief obtain a const reference to the data
-     * (should be made private and replaced with iterators)
      * 
      * @return const T* 
      */
@@ -298,12 +240,12 @@ void TimeSeries<T>::put(const T &val, uint32_t time){
     if (time < interval)            // промежуточные выборки отбрасываем
         return;                     // (здесь должна быть возможность аггрегации данных за интервал сторонними функциями)
 
-    if (time >= 2*interval){           // пропущено несколько выборок
-        if (time/interval > RingBuff<T>::capacity){  // пропустили выборок больше чем весь буфер - сбрасываем всё
+    if (time >= 2*interval){        // пропущено несколько выборок
+        if (time/interval > RingBuff<T>::capacity){  // пропустили выборок больше чем весь текущий буфер - сбрасываем всё
             reset(_t);
         } else {
-            T def;
-            do {                    // заполняем пропуски объектами по умолчанию
+            T def;                  // заполняем пропуски объектами по умолчанию
+            do {
                 RingBuff<T>::push_back(val);
                 time -= interval;
             } while(time>interval);
