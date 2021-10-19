@@ -95,15 +95,13 @@ void setup(){
 
     // for port object we need a config struct
     // this describes port_1 for AC PZEMs
-    auto port1_cfg = PZPort_cfg(PZEM_UART_PORT_1,   // uart number
+    auto port1_cfg = UART_cfg(PZEM_UART_PORT_1,   // uart number
                                 RX_PIN,             // rx pin remapped
-                                TX_PIN,             // tx pin remapped
-                                PORT_1_ID,          // some unique port id 
-                                "Phase_lines");     // Mnemonic name
+                                TX_PIN);             // tx pin remapped
 
     // Ask PZPool object to create a PortQ object based on config provided
     // it will automatically start event queues for the port and makes it available for PZEM assignment
-    if (meters->addPort(port1_cfg)){
+    if (meters->addPort(PORT_1_ID, port1_cfg, "Phase_lines")){
         Serial.printf("Added port id:%d\n", PORT_1_ID);
     } else {
         Serial.printf("ERR: Can't add port id:%d\n", PORT_1_ID);
@@ -111,19 +109,17 @@ void setup(){
 
 
     // and another port for attaching to PZEM003 DC lines
-    auto port2_cfg = PZPort_cfg(PZEM_UART_PORT_2,
+    auto port2_cfg = UART_cfg(PZEM_UART_PORT_2,
                                 UART_PIN_NO_CHANGE,   // using default pins, no remapping
-                                UART_PIN_NO_CHANGE,   // using default pins, no remapping
-                                PORT_2_ID,
-                                "DC_lines");
+                                UART_PIN_NO_CHANGE);   // using default pins, no remapping
 
     // PZEM003 requires custom config for serial port
-    port2_cfg.uartcfg.stop_bits  = UART_STOP_BITS_2;          // PZEM003 need 2 stop bits
+    port2_cfg.uartcfg.stop_bits  = UART_STOP_BITS_2;          // PZEM003 needs 2 stop bits
 
 
     // Ask PZPool object to create a PortQ object based on config provided
     // it will automatically start event queues for the port and makes it available for PZEM assignment
-    if (meters->addPort(port2_cfg)){
+    if (meters->addPort(PORT_2_ID, port2_cfg, "DC_lines")){
         Serial.printf("Added port id:%d\n", PORT_2_ID);
     } else {
         Serial.printf("ERR: Can't add port id:%d\n", PORT_2_ID);

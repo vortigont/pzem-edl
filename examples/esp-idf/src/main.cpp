@@ -14,10 +14,9 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 
 /*
-    Single PZEM004 device poller running under ESP-IDF,
-    could be build without Arduino framework
+    Single PZEM004 device poller build under ESP-IDF without Arduino framework
 
-    see example '01_SinglePZEM004' for more details
+    see example '01_SinglePZEM004' for more operation details
 */
 
 
@@ -52,7 +51,7 @@ void app_main() {
     pz = new PZ004(PZEM_ID);
 
     // and link our port with PZEM object
-    pz->attachUartQ(qport);
+    pz->attachMsgQ(qport);
 
     // one last step - we must start PortQ tasks to handle messages
     qport->startQueues();
