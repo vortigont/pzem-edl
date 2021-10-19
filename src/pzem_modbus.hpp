@@ -11,7 +11,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 */
 
 #pragma once
-#include "uartq.hpp"
+#include "msgq.hpp"
 #include <cmath>
 
 // Read-Only 16-bit registers

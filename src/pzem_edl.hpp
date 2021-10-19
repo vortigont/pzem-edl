@@ -32,7 +32,7 @@ class PZEM {
     bool sink_lock = false;             // flag marking rx_sink as an active call-back when attached
 
 protected:
-    UartQ *q = nullptr;                 // UartQ sink for TX messages
+    MsgQ *q = nullptr;                 // UartQ sink for TX messages
     rx_callback_t rx_callback = nullptr;          // external callback to trigger on RX data
 
 
@@ -72,7 +72,7 @@ public:
      * @param qport - UartQ object reference
      * @param tx_only - if 'true' than UartQ is used in "shared mode" w/o RX handler
      */
-    void attachUartQ(UartQ *qport, bool tx_only = false);
+    void attachMsgQ(MsgQ *mq, bool tx_only = false);
 
     /**
      * @brief A sink for RX messages
@@ -86,7 +86,7 @@ public:
      * @brief detach IO queues
      * this is mandatory on destruct if RX callback has been set
      */
-    void detachUartQ();
+    void detachMsgQ();
 
     /**
      * @brief external callback function
@@ -345,7 +345,7 @@ public:
      * @return true - on success
      * @return false - on any error
      */
-    bool addPort(PZPort_cfg &portcfg);
+    bool addPort(uint8_t _id, UART_cfg &portcfg, const char *descr=nullptr);
 
     /**
      * @brief attach an existing UART port object to the Pool
