@@ -72,15 +72,16 @@ void setup(){
     // now we must set UART port
 
     // for port object we need a config struct
-    auto port1_cfg = PZPort_cfg(PZEM_UART_PORT_1,   // uart number
+    auto port1_cfg = UART_cfg(PZEM_UART_PORT_1,   // uart number
                                 RX_PIN,             // rx pin remapped
-                                TX_PIN,             // tx pin remapped
-                                PORT_1_ID,          // some unique port id 
-                                "Phase_lines");     // Mnemonic name
+                                TX_PIN);            // tx pin remapped
 
     // Ask PZPool object to create a PortQ object based on config provided
     // it will automatically start event queues for the port and makes it available for PZEM assignment
-    if (meters->addPort(port1_cfg)){
+    if (meters->addPort(PORT_1_ID,          // some unique port id
+                        port1_cfg,          // uart config struct
+                        "Phase_lines")      // mnemonic name for the port (optional)
+      ){
         Serial.printf("Added port id:%d\n", PORT_1_ID);
     } else {
         Serial.printf("ERR: Can't add port id:%d\n", PORT_1_ID);

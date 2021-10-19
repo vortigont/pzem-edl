@@ -37,14 +37,14 @@ PZEM::~PZEM(){
         ESP_LOGD(TAG, "PZEM deconstruct, id: %d", id);
     #endif
     if (sink_lock)
-        detachUartQ();
+        detachMsgQ();
 }
 
-void PZEM::attachUartQ(UartQ *qport, bool tx_only){
-    if (!qport || q)    // check if either new port is empty or there is already exist an attachment
+void PZEM::attachMsgQ(MsgQ *mq, bool tx_only){
+    if (!mq || q)    // check if either new port is empty or there is already exist an attachment
         return;
 
-    q = qport;
+    q = mq;
 
     if (tx_only)
         return;
@@ -56,7 +56,7 @@ void PZEM::attachUartQ(UartQ *qport, bool tx_only){
     sink_lock = true;
 }
 
-void PZEM::detachUartQ(){
+void PZEM::detachMsgQ(){
     if (!q)
         return;
     if (sink_lock)
@@ -180,11 +180,11 @@ PZPool::~PZPool(){
     ports.clear();
 }
 
-bool PZPool::addPort(PZPort_cfg &portcfg){
-    if (port_by_id(portcfg.id))
+bool PZPool::addPort(uint8_t _id, UART_cfg &portcfg, const char *descr){
+    if (port_by_id(_id))
         return false;       // port with such id already exist
 
-    auto p = std::make_shared<PZPort>(portcfg);
+    auto p = std::make_shared<PZPort>(_id, portcfg, descr);
     return addPort(p);
 }
 
@@ -198,7 +198,7 @@ bool PZPool::addPort(std::shared_ptr<PZPort> port){
     uint8_t portid = port->id;
 
     // RX handler lambda catches port-id here and suppies this id to the handler function
-    port->attach_RX_hndlr([this, portid](RX_msg *msg){
+    port->q->attach_RX_hndlr([this, portid](RX_msg *msg){
             if (!msg)
                 return;
 
@@ -251,10 +251,10 @@ bool PZPool::addPZEM(const uint8_t port_id, PZEM *pz){
     pz->detach_rx_callback();
 
     // detach existing port (if any)
-    pz->detachUartQ();
+    pz->detachMsgQ();
 
     // and attach our port  (TX-only!)
-    pz->attachUartQ(node->port.get(), true);
+    pz->attachMsgQ(node->port.get()->q.get(), true);
 
     node->pzem.reset(std::move(pz));
 

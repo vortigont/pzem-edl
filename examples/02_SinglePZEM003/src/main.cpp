@@ -75,7 +75,7 @@ void setup(){
     pz = new PZ003(PZEM_ID);
 
     // and link our port with PZEM object
-    pz->attachUartQ(qport);
+    pz->attachMsgQ(qport);
 
     // one last step - we must start PortQ tasks to handle messages
     qport->startQueues();

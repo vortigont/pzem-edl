@@ -2,7 +2,7 @@
     "name": "pzem-edl",
     "frameworks": "arduino",
     "platforms": ["espressif32"],
-    "version": "0.0.3",
+    "version": "0.0.4",
     "keywords": "peacefair, pzem, powermeter, pzem004t, pzem003, pzem-017, pzem-017",
     "description": "PZEM event-driven library - an ESP32 Arduino/esp-idf library implementing communication interface for PeaceFair PZEM-004Tv3.0/PZEM-003 Energy monitor modules via Modbus-RTU proto",
     "url": "https://github.com/vortigont/espem-edl",
@@ -25,6 +25,10 @@
           "name": "LinkedList",
           "version": "https://github.com/vortigont/LinkedList"}
     ],
+    "build": {
+        "flags": "-std=gnu++14",
+        "unflags": "-std=gnu++11"
+    },
     "export": {
         "include":
         [
@@ -60,7 +64,17 @@
         },
         {
             "name": "Multiple PZEM004",
-            "base": "examples/03_MultiplePZEM",
+            "base": "examples/03_MultiplePZEM004",
+            "files": [
+                "platformio.ini",
+                "src/main.h",
+                "src/main.cpp",
+                "src/src.ino"
+            ]
+        },
+        {
+            "name": "Mixed PZEM Pool",
+            "base": "examples/04_MixedPool",
             "files": [
                 "platformio.ini",
                 "src/main.h",

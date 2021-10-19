@@ -23,7 +23,6 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "esp_log.h"
 #endif
 
-
 #define PZEM_BAUD_RATE          9600
 #define PZEM_UART               UART_NUM_1      // HW Serial Port 2 on ESP32
 #define PZEM_UART_TIMEOUT       100             // ms to wait for PZEM RX/TX messaging
@@ -33,7 +32,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define TX_BUF_SIZE (0)                         // should be eq 0 or greater than UART_FIFO_LEN, I set it 0 'cause I have my own TX queue
 
 // RX
-#define rx_evt_queue_DEPTH      10
+#define rx_msg_q_DEPTH          10
 #define EVT_TASK_PRIO           4
 #define EVT_TASK_STACK          3072
 #define EVT_TASK_NAME           "UART_EVQ"
@@ -68,7 +67,6 @@ UART2 	GPIO 16 	GPIO 17 	GPIO 7 	    GPIO 8
  * @brief Structure with Modbus-RTU message data
  * ment to be sent over UART
  */
-
 struct TX_msg {
     const size_t len;       // msg size
     uint8_t* data;          // data pointer
@@ -97,21 +95,106 @@ struct RX_msg {
     ~RX_msg(){ delete[] rawdata; rawdata = nullptr; }
 };
 
+
+class MsgQ {
+
+public:
+    typedef std::function<void (RX_msg*)> datahandler_t;
+
+    MsgQ(){};
+    // Class dtor
+    virtual ~MsgQ(){};
+
+    // Copy semantics : forbidden
+    MsgQ(const MsgQ&) = delete;
+    MsgQ& operator=(const MsgQ&) = delete;
+
+    /**
+     * @brief enqueue PZEM message and transmit once TX line is free to go
+     * this method will take ownership on TX_msg object and 'delete' it
+     * after sending to FIFO. It is an error to access/delete/change this object once passed here
+     * 
+     * @param msg PZEM command message object
+     * @return true - if mesage has been enqueue's successfully
+     * @return false - if enqueue failed due to Q is full or any other issue
+     */
+    virtual bool txenqueue(TX_msg *msg) = 0;
+
+    /**
+     * @brief attach call-back function to feed it with arriving messages from RX line
+     * if there is no call-back attached, incoming messages are discarded
+     * @param f functional call-back 'std::function<void (RX_msg*)>'
+     */
+    virtual void attach_RX_hndlr(datahandler_t f);
+
+    /**
+     * @brief remove call-back function
+     * if there is no call-back attached, incoming messages are discarded
+     */
+    virtual void detach_RX_hndlr();
+
+    /**
+     * @brief dump content of received packet to the stdout
+     * 
+     * @param m 
+     */
+    virtual void rx_msg_debug(const RX_msg *m);
+
+    /**
+     * @brief dump content of transmitted packet to the stdout
+     * 
+     * @param m 
+     */
+    virtual void tx_msg_debug(const TX_msg *m);
+
+    /**
+     * @brief start RX/TX queues Task handlers
+     * 
+     * @return true if success
+     * @return false on any error or if Q's/tasks already running
+     */
+    virtual bool startQueues(){ return false; };
+
+    /**
+     * @brief stop RX/TX queues Task handlers
+     * 
+     */
+    virtual void stopQueues(){};
+
+protected:
+    /**
+     * @brief RX Queue event handler function
+     * NOTE: On RX event, handler creates new RX_msg object with received data
+     * once this object is passed to the call-back function - it is up to the calee
+     * to maintaint life-time of the object. Once utilised it MUST be 'delete'ed to prevent mem leaks
+     */
+    virtual void rxqueuehndlr() = 0;
+
+    /**
+     * @brief TX message Queue handler function
+     * 
+     */
+    virtual void txqueuehndlr() = 0;
+
+    datahandler_t   rx_callback = nullptr;  // RX data callback
+    QueueHandle_t   rx_msg_q=nullptr;           // RX msg queue
+    QueueHandle_t   tx_msg_q=nullptr;       // TX msg queue
+
+};
+
 /**
- * @brief PZEM UART port instance configuration structure
- * used to spawn new PZPort instances for MODBUS devices
+ * @brief UART port instance configuration structure
+ * used to spawn new UARTQ instances for MODBUS devices
  * other than PZEM004v30
  */
-struct PZPort_cfg {
+struct UART_cfg {
     uart_port_t p;
     int gpio_rx;
     int gpio_tx;
-    uint8_t id;
-    std::unique_ptr<char[]> descr;
     uart_config_t uartcfg;              // could be used to change uart properties for other modbus devices
 
-    PZPort_cfg (uart_port_t _p=PZEM_UART, int _rx=UART_PIN_NO_CHANGE, int _tx=UART_PIN_NO_CHANGE, uint8_t _id = 0, const char *_name=nullptr,
-                uart_config_t ucfg =  {     // default values for PZEMv30
+    UART_cfg (uart_port_t _p=PZEM_UART, int _rx=UART_PIN_NO_CHANGE, int _tx=UART_PIN_NO_CHANGE,
+                uart_config_t ucfg =  {     // default values for PZEM004tv30
                 .baud_rate = PZEM_BAUD_RATE,
                 .data_bits = UART_DATA_8_BITS,
                 .parity = UART_PARITY_DISABLE,
@@ -119,12 +202,7 @@ struct PZPort_cfg {
                 .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
                 .rx_flow_ctrl_thresh = 0
             }
-        ) : p(_p), gpio_rx(_rx), gpio_tx(_tx), id(_id), uartcfg(ucfg) {
-            if (!_name || !*_name){
-                descr = std::unique_ptr<char[]>(new char[9]);
-                sprintf(descr.get(), "Port-%d", _id);
-            } else
-                descr = std::unique_ptr<char[]>(strcpy(new char[strlen(_name) + 1], _name));
+        ) : p(_p), gpio_rx(_rx), gpio_tx(_tx), uartcfg(ucfg) {
     }
 };
 
@@ -143,8 +221,7 @@ struct PZPort_cfg {
  * - Event queue: on
  * - Pin assignment: TxD (default), RxD (default)
  */
-class UartQ {
-    typedef std::function<void (RX_msg*)> datahandler_t;
+class UartQ : public MsgQ {
 
     void init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx);
 
@@ -180,13 +257,13 @@ public:
      * @return true if success
      * @return false on any error or if Q's/tasks already running
      */
-    bool startQueues(){ return start_RX_evt_queue() && start_TX_msg_queue(); };
+    bool startQueues() override { return start_rx_msg_q() && start_TX_msg_queue(); };
 
     /**
      * @brief stop RX/TX queues Task handlers
      * 
      */
-    void stopQueues();
+    void stopQueues() override ;
 
     /**
      * @brief enqueue PZEM message and transmit once TX line is free to go
@@ -197,36 +274,23 @@ public:
      * @return true - if mesage has been enqueue's successfully
      * @return false - if enqueue failed due to Q is full or any other issue
      */
-    bool txenqueue(TX_msg *msg);
+    bool txenqueue(TX_msg *msg) override;
 
-    /**
-     * @brief attach call-back function to feed it with arriving messages from RX line
-     * if there is no call-back attached, incoming messages are discarded
-     * @param f functional call-back 'std::function<void (RX_msg*)>'
-     */
-    virtual void attach_RX_hndlr(datahandler_t f);
+    void attach_RX_hndlr(datahandler_t f) override;
 
-    /**
-     * @brief remove call-back function
-     * if there is no call-back attached, incoming messages are discarded
-     */
-    void detach_RX_hndlr();
+    void detach_RX_hndlr() override;
 
 private:
-
     TaskHandle_t    t_rxq=nullptr;          // RX Q servicing task
     TaskHandle_t    t_txq=nullptr;          // TX Q servicing task
-    QueueHandle_t   rx_evt_queue;           // UART RX event queue
-    QueueHandle_t   tx_msg_q=nullptr;       // UART TX message queue
     SemaphoreHandle_t rts_sem;              // 'ready to send next' Semaphore
-    datahandler_t   rx_callback = nullptr;  // RX data callback
 
     /**
      * @brief start task handling UART RX queue events
      * 
      */
-    bool start_RX_evt_queue(){
-        if (!rx_evt_queue)      // avoid working on non-allocated queue
+    bool start_rx_msg_q(){
+        if (!rx_msg_q)      // avoid working on non-allocated queue
             return false;
 
         //Create a task to handle UART event from ISR
@@ -240,7 +304,7 @@ private:
      * @brief stop task handling UART RX queue events
      * 
      */
-    void stop_RX_evt_queue();
+    void stop_rx_msg_q();
 
     /**
      * @brief start task handling TX msg queue events
@@ -279,20 +343,6 @@ private:
     }
 
     /**
-     * @brief dump content of received packet to the stdout
-     * 
-     * @param m 
-     */
-    void rx_msg_debug(const RX_msg *m);
-
-    /**
-     * @brief dump content of transmitted packet to the stdout
-     * 
-     * @param m 
-     */
-    void tx_msg_debug(const TX_msg *m);
-
-    /**
      * @brief RX Queue event handler function
      * NOTE: On RX event, handler creates new RX_msg object with received data
      * once this object is passed to the call-back function - it is up to the calee
@@ -306,14 +356,14 @@ private:
             xSemaphoreGive(rts_sem);                // сигналим что можно отправлять следующий пакет и мы готовы ловить ответ
 
             // 'xQueueReceive' will "sleep" untill an event messages arrives from the RX event queue
-            if(xQueueReceive(rx_evt_queue, (void*)&event, (portTickType)portMAX_DELAY)) {
+            if(xQueueReceive(rx_msg_q, (void*)&event, (portTickType)portMAX_DELAY)) {
 
                 //Handle received event
                 switch(event.type) {
                     case UART_DATA: {
                         if (!rx_callback){              // if there is no RX handler, than discard all RX
                             uart_flush_input(port);
-                            xQueueReset(rx_evt_queue);
+                            xQueueReset(rx_msg_q);
                             break;
                         }
 
@@ -322,7 +372,7 @@ private:
                         if (0 == datalen){
                             ESP_LOGD(TAG, "can't retreive RX data from buffer, t: %lld", esp_timer_get_time()/1000);
                             uart_flush_input(port);
-                            xQueueReset(rx_evt_queue);
+                            xQueueReset(rx_msg_q);
                             break;
                         }
 
@@ -335,7 +385,7 @@ private:
                                 ESP_LOGD(TAG, "unable to read data from RX buff");
                                 delete[] buff;
                                 uart_flush_input(port);
-                                xQueueReset(rx_evt_queue);
+                                xQueueReset(rx_msg_q);
                                 break;
                             }
 
@@ -354,12 +404,12 @@ private:
                     }
                     case UART_FIFO_OVF:
                         ESP_LOGW(TAG, "UART RX fifo overflow!");
-                        xQueueReset(rx_evt_queue);
+                        xQueueReset(rx_msg_q);
                         break;
                     case UART_BUFFER_FULL:
                         ESP_LOGW(TAG, "UART RX ringbuff full");
                         uart_flush_input(port);
-                        xQueueReset(rx_evt_queue);
+                        xQueueReset(rx_msg_q);
                         break;
                     case UART_BREAK:
                     case UART_FRAME_ERR:
@@ -395,7 +445,7 @@ private:
                     xSemaphoreTake(rts_sem, pdMS_TO_TICKS(PZEM_UART_TIMEOUT));
                     // an old reply migh be still in the rx queue while I'm handling this one
                     //uart_flush_input(port);     // input should be cleared from any leftovers if I expect a reply (in case of a timeout only)
-                    //xQueueReset(rx_evt_queue);
+                    //xQueueReset(rx_msg_q);
                 }
 
                 // Send message data to the UART TX FIFO
@@ -418,23 +468,45 @@ private:
 };
 
 
+
 /**
- * @brief derrived from UartQ object
+ * @brief port object is a wrapper for MsgQ or it's derivates
  * 
  */
-class PZPort : public UartQ {
+class PZPort {
     bool qrun;
     std::unique_ptr<char[]> descr;
+
+    void setdescr(const char *_name){
+        if (!_name || !*_name){
+            descr = std::unique_ptr<char[]>(new char[9]);
+            sprintf(descr.get(), "Port-%d", id);
+        } else
+            descr = std::unique_ptr<char[]>(strcpy(new char[strlen(_name) + 1], _name));
+    }
+
 
 public:
     const uint8_t id;
     const char *getDescr() const;
     bool active() const {return qrun;}
     bool active(bool newstate);
+    std::unique_ptr<MsgQ> q = nullptr;
 
-    PZPort (PZPort_cfg &cfg) :
-        UartQ(cfg.p, cfg.uartcfg, cfg.gpio_rx, cfg.gpio_tx), id(cfg.id) {
-            descr = std::move(cfg.descr);
-            qrun = startQueues();
+    // Construct from generic MgsQ object
+    PZPort (uint8_t _id, MsgQ *mq, const char *_name=nullptr) : id(_id) {
+        //std::move(mq);
+        q.reset(mq);
+        setdescr(_name);
+        qrun = q->startQueues();
     }
+
+    // Construct a new UART port
+    PZPort (uint8_t _id, UART_cfg &cfg, const char *_name=nullptr) : id(_id) {
+        UartQ *_q = new UartQ(cfg.p, cfg.uartcfg, cfg.gpio_rx, cfg.gpio_tx);
+        q.reset(_q);
+        setdescr(_name);
+        qrun = q->startQueues();
+    }
+
 };
