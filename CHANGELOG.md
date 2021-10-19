@@ -1,3 +1,8 @@
+ - Abstracted Message Queue class
+ - Add TimeSeries feature
+   - RingBuffer class for storing data structs (support mem allocation in PSRAM)
+   - Iterator class to traverse ring buffers
+   - TimeSeries object and container for custom sets of TS data
  - a pool class could manage mixed pzem device types simultaneously
  - support for PZEM003
  - building under esp-idf

@@ -21,6 +21,10 @@ Feel free to open a discussion topic on any questions.
  * Class objects for managing single device/port instances
  * PZPool to handle multiple PZEM devices of different types groupped on single/multiple Serial port(s)
  * [pzem_cli](/examples/pzem_cli) - a small sketch to interact with pzem via terminal cli
+ * Collector module
+    * collecting TimeSeries of metrics data
+    * iterated circular buffers
+    * PSRAM support
 
 
 ### Supported modules
@@ -33,11 +37,7 @@ Feel free to open a discussion topic on any questions.
  * Hardware Serial only (not a problem for esp32, it has 3 of it with pin remapping)
 
 ### TODO list
- * Collector module
-    * collecting series of metrics data
-    * circular buffers
-    * PSRAM support
-    * time series
+ * Averaging for TimeSeries
  * Export module
     * JSON
     * binary
