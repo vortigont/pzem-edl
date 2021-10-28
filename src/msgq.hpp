@@ -44,7 +44,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define TXQ_TASK_NAME           "UART_TXQ"
 
 // ESP32 log tag
-static const char *TAG = "UartQ";
+static const char *TAG __attribute__((unused)) = "UartQ";
 
 /*
 Ref links:
@@ -330,7 +330,7 @@ private:
      * @brief stop task handling TX msg queue events
      * 
      */
-    void stop_TX_msg_queue();
+    void stop_tx_msg_q();
 
     // static wrapper for Task to call RX handler class member
     static void rxTask(void* pvParams){

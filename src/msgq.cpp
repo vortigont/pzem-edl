@@ -65,11 +65,10 @@ void MsgQ::tx_msg_debug(const TX_msg *m){}
 
 
 UartQ::~UartQ(){
+    rx_callback = nullptr;
     stopQueues();
     uart_driver_delete(port);
-    vQueueDelete(rx_msg_q);
-    rx_msg_q = nullptr;
-    rx_callback = nullptr;
+    vSemaphoreDelete(rts_sem);
 }
 
 void UartQ::init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx){
@@ -82,11 +81,11 @@ void UartQ::init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx){
 
 
 void UartQ::stopQueues(){
-    stop_TX_msg_queue();
+    stop_tx_msg_q();
     stop_rx_msg_q();
 }
 
-void UartQ::stop_TX_msg_queue(){
+void UartQ::stop_tx_msg_q(){
     if (t_txq){
         vTaskDelete(t_txq);
         t_txq = nullptr;
