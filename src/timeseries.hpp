@@ -46,9 +46,10 @@ template <typename T> class RingBuff;
  */
 template <typename T, bool Const = false>
 struct RingIterator {
-    using iterator_category = std::bidirectional_iterator_tag;  // forward_iterator_tag;
+    using iterator_category = std::random_access_iterator_tag;  // bidirectional_iterator_tag;
     using difference_type   = std::ptrdiff_t;
-    using value_type        = T;
+    //using value_type        = T;
+    using value_type        = typename std::remove_cv<T>::type;
     using pointer           = typename std::conditional_t<Const, T const *, T *>;
     using reference         = typename std::conditional_t<Const, T const &, T &>;
     using container         = typename std::conditional_t<Const, RingBuff<T> const, RingBuff<T>>;
@@ -64,30 +65,40 @@ struct RingIterator {
 
     // const
     template< bool c = Const >
-    std::enable_if_t< c, reference > operator*()  const { return *get(m_idx); }
+    std::enable_if_t< c, reference > operator*()  const noexcept { return *get(m_idx); }
 
     template< bool c = Const >
-    std::enable_if_t< c, pointer >   operator->() const { return get(m_idx); }
+    std::enable_if_t< c, pointer >   operator->() const noexcept { return get(m_idx); }
 
 
     // non-const
     template< bool c = Const >
-    std::enable_if_t< !c, reference > operator*()  const { return *get(m_idx); }
+    std::enable_if_t< !c, reference > operator*()  const noexcept { return *get(m_idx); }
 
     template< bool c = Const >
-    std::enable_if_t< !c, pointer >   operator->() const { return get(m_idx); }
+    std::enable_if_t< !c, pointer >   operator->() const noexcept { return get(m_idx); }
 
     // Incrementers
     RingIterator& operator++() { ++m_idx; return *this; }
-    RingIterator operator++(int) { RingIterator tmp = *this; ++(*this); return tmp; }
+    RingIterator  operator++(int) { RingIterator tmp = *this; ++(*this); return tmp; }
+    RingIterator& operator+=(const difference_type& d) { m_idx+=d; return *this; }
 
     // Decrementers
     RingIterator& operator--() { --m_idx; return *this; }
-    RingIterator operator--(int) { RingIterator tmp = *this; --(*this); return tmp; }
+    RingIterator  operator--(int) { RingIterator tmp = *this; --(*this); return tmp; }
+    RingIterator& operator-=(const difference_type& d) { m_idx-=d; return *this; }
+    RingIterator  operator- (const difference_type& d) const { return RingIterator(m_ptr, m_idx - d); }
+    difference_type operator- (const RingIterator& a) const { return (m_idx - a.m_idx); }
+
 
     // Comparators
     bool operator== (const RingIterator& a) const { return (m_ptr == a.m_ptr && m_idx == a.m_idx); };
-    bool operator!= (const RingIterator& a) const { return (m_ptr != a.m_ptr || m_idx != a.m_idx); };
+    bool operator!= (const RingIterator& a) const { return !(*this == a); };
+    bool operator<  (const RingIterator& a) const { assert(m_ptr == a.m_ptr); return (m_idx < a.m_idx); }
+    bool operator>  (const RingIterator& a) const { assert(m_ptr == a.m_ptr); return (m_idx > a.m_idx); }
+    bool operator<= (const RingIterator& a) const { return (*this == a || *this < a); }
+    bool operator>= (const RingIterator& a) const { return (*this == a || *this > a); }
+
     //friend bool operator== (const RingIterator& a, const RingIterator& b) { return a.m_ctr == b.m_ctr; };
     //friend bool operator!= (const RingIterator& a, const RingIterator& b) { return a.m_ctr != b.m_ctr; };
 
@@ -98,10 +109,7 @@ struct RingIterator {
     private:
 
     inline pointer get(int idx) const {
-        if (!m_ptr->size)
-            return nullptr;
-
-        return &m_ptr->data[(m_ptr->head + abs(m_idx)) % m_ptr->size];    // offset from head
+        return m_ptr->at(std::abs(m_idx));    // offset from head
     }
 };
 
@@ -149,14 +157,27 @@ public:
     // D-tor
     virtual ~RingBuff(){};
 
-        
+
+    T *at(int offset) const {
+        if (!size)
+            return nullptr;
+
+        offset %= size;
+        if (offset < 0)
+            offset += size; 
+
+        return &data[(head + offset) % capacity];    // offset from head
+    }
+
     /**
      * @brief reset buffer to initial state
      * no data changed actually, only iterators and pointers are invalided
      */
     void clear(){ head = 0; size = 0; };
 
-    void push_back(const T &val);
+    int getSize() const { return this->size; }
+
+    void push_back(T const &val);
 
     //T* pop_front(){};
 
@@ -229,8 +250,6 @@ public:
 
     uint32_t getTstamp() const { return tstamp; }
 
-    int getSize() const { return this->size; }
-
     uint32_t getInterval() const { return interval; }
 
     const char* getDescr() const { return descr; }
@@ -249,9 +268,70 @@ public:
 
     const TimeSeries<T>* getTS(uint8_t id) const;
     uint8_t addTS(size_t s, uint32_t start_time, uint32_t period = 1, const char *descr = nullptr, uint8_t id = 0);
+
+    /**
+     * @brief remove specific TS object
+     * 
+     * @param id TimeSeries ID
+     */
     void removeTS(uint8_t id);
 
+    /**
+     * @brief destroy ALL TS's in chain and release memory
+     * 
+     */
+    void purge(){ tschain.clear(); };
+
+    /**
+     * @brief clear data for the entire container
+     * all TS's are cleared without releasing memory, reseting it's size to 0
+     * 
+     */
+    void clear();
+
+    /**
+     * @brief push new value to the TimeSeries chain
+     * 
+     * @param val - value
+     * @param time - current timestamp
+     */
     void push(const T &val, uint32_t time);
+
+    bool setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime);
+
+    /**
+     * @brief get TS size by id
+     * return current number of elements in TimeSeries object.
+     * it could be less than maximum capacity size depending on amount of samples being stored 
+     * @param id - TS object id
+     * @return int number of elements
+     */
+    int getTSsize(uint8_t id) const;
+
+    /**
+     * @brief get total TS containner size
+     * return current number of elements in all TimeSeries objects.
+     * it could be less than maximum capacity size depending on amount of samples being stored 
+     * @return int number of elements
+     */
+    int getTSsize() const;
+
+    /**
+     * @brief get TS capacity by id
+     * return max number of elements in TimeSeries object
+     * @param id - TS object id
+     * @return int number of elements
+     */
+    int getTScap(uint8_t id) const;
+
+    /**
+     * @brief get total TS container capacity
+     * return total max number of elements in TSContainer object
+     * @return int number of elements
+     */
+    int getTScap() const;
+
+    int getTScnt() const { return tschain.size(); };
 
 protected:
     LList<std::shared_ptr<TimeSeries<T>>> tschain;  // time-series chain
@@ -359,9 +439,57 @@ void TSContainer<T>::removeTS(uint8_t id){
 }
 
 template <typename T>
-void TSContainer<T>::push(const T &val, uint32_t time){
+bool TSContainer<T>::setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime){
+    for (auto _i = tschain.begin(); _i != tschain.end(); ++_i){
+        if (_i->get()->id == id){
+            _i->get()->setInterval(_interval, newtime);
+            return true;
+        }
+    }
+    return false;
+}
+
+
+template <typename T>
+void TSContainer<T>::clear(){
     for (auto i = tschain.begin(); i != tschain.end(); ++i){
-        i->get()->push(val, time);
+        i->get()->clear();
     }
 }
 
+template <typename T>
+void TSContainer<T>::push(const T &val, uint32_t time){
+    for (auto i = tschain.begin(); i != tschain.end(); ++i)
+        i->get()->push(val, time);
+}
+
+template <typename T>
+int TSContainer<T>::getTSsize(uint8_t id) const {
+    auto ts = getTS(id);
+    return ts ? ts->getSize() : 0;
+}
+
+template <typename T>
+int TSContainer<T>::getTScap(uint8_t id) const {
+    auto ts = getTS(id);
+    return ts ? ts->capacity : 0;
+}
+
+template <typename T>
+int TSContainer<T>::getTSsize() const {
+    int s = 0;
+    for (auto i = tschain.cbegin(); i != tschain.cend(); ++i)
+        s += i->get()->getSize();
+
+    return s;
+}
+
+template <typename T>
+int TSContainer<T>::getTScap() const {
+    int s = 0;
+
+    for (auto i = tschain.cbegin(); i != tschain.cend(); ++i)
+        s += i->get()->capacity;
+
+    return s;
+}
