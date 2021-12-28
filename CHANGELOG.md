@@ -1,3 +1,6 @@
+# Change Log
+
+## v 1.0.0 (2021-12-28)
  - Abstracted Message Queue class
  - Add TimeSeries feature
    - RingBuffer class for storing data structs (support mem allocation in PSRAM)

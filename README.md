@@ -6,8 +6,6 @@ __[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANG
 
 This is an ESP32 Arduino/esp-idf library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0**/**PZEM-003** Energy monitor modules via MODBUS proto.
 
-**_currently lib is in it's early develompent state, so expect bugs, issues and sporadic API changes any time_**
-
 The main idea is that lib uses FreeRTOS features to implement non-blocking event-driven operation when exchanging messages via serial port. It is written to run multiple PZEM devices simultaneously sharing same uart port(s) without blocking on rx/tx operations and at the same time to keep a strict message exchange ordering to prevent transmit collisions.
 
 Feel free to open a discussion topic on any questions.
