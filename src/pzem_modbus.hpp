@@ -278,9 +278,9 @@ struct metrics : pzmbus::metrics {
         uint8_t const *value = &m->rawdata[3];
 
         voltage = __builtin_bswap16(*(uint16_t*)&value[REG_VOLTAGE*2]);
-        current = __builtin_bswap16(*(uint16_t*)&value[REG_CURRENT_L*2]) | __builtin_bswap16(*(uint16_t*)&value[REG_CURRENT_H*2]  << 16);
-        power   = __builtin_bswap16(*(uint16_t*)&value[REG_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[REG_POWER_H*2]    << 16);
-        energy  = __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_H*2]   << 16);
+        current = __builtin_bswap16(*(uint16_t*)&value[REG_CURRENT_L*2]) | __builtin_bswap16(*(uint16_t*)&value[REG_CURRENT_H*2])  << 16;
+        power   = __builtin_bswap16(*(uint16_t*)&value[REG_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[REG_POWER_H*2])    << 16;
+        energy  = __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_H*2])   << 16;
         freq    = __builtin_bswap16(*(uint16_t*)&value[REG_FREQUENCY*2]);
         pf      = __builtin_bswap16(*(uint16_t*)&value[REG_PF*2]);
         alarm   = __builtin_bswap16(*(uint16_t*)&value[REG_ALARM_H*2]);
@@ -493,8 +493,8 @@ struct metrics : pzmbus::metrics {
 
         voltage = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_VOLTAGE*2]);
         current = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_CURRENT*2]);
-        power   = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_H*2]    << 16);
-        energy  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_H*2]   << 16);
+        power   = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_H*2])    << 16;
+        energy  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_H*2])   << 16;
         alarmh  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ALARM_H*2]);
         alarml  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ALARM_L*2]);
         return true;
