@@ -1,5 +1,7 @@
 # Change Log
 
+## v 1.0.1 (2022-01-30)
+ - fix incorrect byte shift for 4-byte values
 ## v 1.0.0 (2021-12-28)
  - Abstracted Message Queue class
  - Add TimeSeries feature
