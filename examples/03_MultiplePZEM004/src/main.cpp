@@ -46,7 +46,7 @@ using namespace pzmbus;     // Use generic PZEM namespace
 #define PZEM_ID_2 43        // (we all know why '42' is THE number, right? :) )
 #define PZEM_ID_3 44
 
-// those are PZEM modbus addresses, must be programmed into PZEM in advance! (use pzem_cli tool to do this)
+// those are PZEM modbus addresses, must be programmed into PZEM in advance! (use pzem_cli tool to do this - https://github.com/vortigont/pzem-edl/tree/main/examples/pzem_cli)
 #define PZEM_1_ADDR 10
 #define PZEM_2_ADDR 11
 #define PZEM_3_ADDR 12

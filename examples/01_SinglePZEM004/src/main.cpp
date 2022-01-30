@@ -160,9 +160,8 @@ void setup(){
 
 void loop(){
     // we do not need this loop at all :)
-    for (;;){
-        delay(1000);
-    }
+    // might even kill it's task
+    vTaskDelete(NULL);
 }
 
 

@@ -19,6 +19,7 @@ using namespace pz004;
 #define RX_PIN 22                         // custom RX pin number
 #define TX_PIN 19                         // custom TX pin number
 
+#define WAIT4SERIAL     (while (Serial.available() == 0){delay(200);})
 
 /*
     This is a small sketch that shows how to work with a low level pzem-edl functions - craft PZEM messages and parse replies.
@@ -78,7 +79,7 @@ void menu(){
     Serial.println("6 - Set power alarm threshold");
     Serial.println();
 
-    while (Serial.available() == 0); // this is just good-old blocking loop method :)
+    WAIT4SERIAL; // this is just good-old blocking loop method :)
     int cmd = Serial.parseInt();
 
     switch(cmd){
@@ -114,13 +115,13 @@ void get_addr_bcast(){
 
 void set_mbus_addr(){
     Serial.println("Enter new modbus addr in range 1-247");
-    while (Serial.available() == 0);        // this is just good-old blocking loop method :)
+    WAIT4SERIAL;        // this is just good-old blocking loop method :)
     int val = Serial.parseInt();
 
     Serial.printf("Please confirm that you want to set a new addr to '%d'\n", val);
     Serial.println("1 - to 'YES', 0 - to cancel");
 
-    while (Serial.available() == 0);        // this is just good-old blocking loop method :)
+    WAIT4SERIAL;        // this is just good-old blocking loop method :)
     int v = Serial.parseInt();
 
     if (1 == v){
@@ -153,13 +154,13 @@ void get_alrm_thr(){
 
 void set_alrm_thr(){
     Serial.println("Enter new power alarm threshold value in range 1-50000 watt");
-    while (Serial.available() == 0);        // this is just good-old blocking loop method :)
+    WAIT4SERIAL;        // this is just good-old blocking loop method :)
     int val = Serial.parseInt();
 
     Serial.printf("Please confirm that you want to set new value to '%d'\n", val);
     Serial.println("1 - to 'YES', 0 - to cancel");
 
-    while (Serial.available() == 0);
+    WAIT4SERIAL;
     int v = Serial.parseInt();
 
     if (1 == v){
