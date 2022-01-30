@@ -19,7 +19,7 @@ using namespace pz004;
 #define RX_PIN 22                         // custom RX pin number
 #define TX_PIN 19                         // custom TX pin number
 
-#define WAIT4SERIAL     (while (Serial.available() == 0){delay(200);})
+#define WAIT4SERIAL     while (Serial.available() == 0){delay(200);}
 
 /*
     This is a small sketch that shows how to work with a low level pzem-edl functions - craft PZEM messages and parse replies.
