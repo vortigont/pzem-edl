@@ -71,7 +71,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define ENERGY_RST_MSG_SIZE     4
 #define REPORT_ADDR_MSG_SIZE    5 
 
-#define PZEM_REFRESH_PERIOD     1000    // PZEM updates it's internal register data every ~1 sec
+#define PZEM_REFRESH_PERIOD     1000    // ms, PZEM updates it's internal register data every ~1 sec
 
 
 // defines for PZEM003 device
@@ -169,12 +169,12 @@ struct state {
     void reset_poll_us(){ poll_us=esp_timer_get_time(); }
 
     /**
-     * @brief data considered stale if last update time is more than PZEM_REFRESH_PERIOD
+     * @brief data considered stale if last update time is more than 2*PZEM_REFRESH_PERIOD ms
      * 
      * @return true if stale
      * @return false if data is fresh and valid
      */
-    bool dataStale() const {return (esp_timer_get_time() - update_us > PZEM_REFRESH_PERIOD );}
+    bool dataStale() const {return (esp_timer_get_time() - update_us > 2 * PZEM_REFRESH_PERIOD * 1000 );}
 
     /**
      * @brief try to parse PZEM reply packet and update state structure
