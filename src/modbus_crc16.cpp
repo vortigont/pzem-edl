@@ -10,10 +10,11 @@ Copyright (C) Emil Muratov, 2021
 GitHub: https://github.com/vortigont/pzem-edl
 */
 
-namespace modbus {
-
 #include "modbus_crc16.h"
 #include <string.h>
+
+namespace modbus {
+
 
 // Pre-computed CRC16_MODBUS table
 // http://www.sunshine2k.de/coding/javascript/crc/crc_js.html

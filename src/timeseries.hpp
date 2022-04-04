@@ -29,8 +29,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 
 // PSRAM support
 #include <esp_heap_caps.h>
-#include <esp_spiram.h>
-
+#include <esp32/spiram.h>
 
 // forward declarations
 template <typename T> class RingBuff;
@@ -252,7 +251,7 @@ public:
 
     uint32_t getInterval() const { return interval; }
 
-    const char* getDescr() const { return descr; }
+    const char* getDescr() const { return descr.get(); }
 
     // Setters
     void setInterval(uint32_t _interval, uint32_t newtime);
