@@ -22,14 +22,19 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "no_c++14"
 #endif
 
-
 #include <cstdlib>
 #include "LList.h"
-//#include "psalloc.hpp"
 
 // PSRAM support
+#include "esp_idf_version.h"
 #include <esp_heap_caps.h>
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
 #include <esp32/spiram.h>
+#else
+#include <esp_spiram.h>     // for older IDF core
+#endif
+//#include "psalloc.hpp"
 
 // forward declarations
 template <typename T> class RingBuff;
