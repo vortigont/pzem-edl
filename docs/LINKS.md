@@ -18,7 +18,7 @@ __[README](/README.md)
 | Link          | Description |
 |---------------|-------------|
 | Oleh's [PZEM-004T lib](https://github.com/olehs/PZEM004T) | The original arduino lib for legacy version of PZEM004t device |
-| Vortigont's [pzem-edl lib](https://github.com/vortigont/pzem-edl) | PZEM-004Tv3.0/PZEM-003 non-blocking event-driven library for ESP32 RTOS |
+| mandulaj's [ PZEM-004T-v30 lib](https://github.com/mandulaj/PZEM-004T-v30) | Generic Arduino lib for PZEM-004T-v30 with a variaty of platforms supported |
 | Maxzerker's [PZEM-017-v1 lib](https://github.com/maxzerker/PZEM-017-v1)  | Maxzerker's lib for the DC version PZEM-017-v1 |
 | PZEM on [TASMOTA](https://tasmota.github.io/docs/PZEM-0XX/) | Tasmota has it's own embeded support for PZEM |
 | [zabbuino ](https://github.com/zbx-sadman/zabbuino) |  Zabbix agent firmware for Arduino supporting PZEM meters |

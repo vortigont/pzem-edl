@@ -1,5 +1,7 @@
 # Change Log
 
+ * fix: PZPool::addPZEM() method unable to create new PZEM objects in the pool
+
 ## v 1.0.2 (2022-04-06)
  * fix stale data calculation
  * fix IDF build with timeseries feature for IDF 3/4 and arduino core 1.x and 2.x 
