@@ -219,13 +219,13 @@ bool PZPool::addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbu
 
     switch (model){
         case pzmbus::pzmodel_t::pzem004v3 : {
-            auto pz = std::unique_ptr<PZEM>(new PZ004(pzem_id, modbus_addr, descr));     // create new PZEM object
-            return addPZEM(port_id, pz.get());
+            auto pz = new PZ004(pzem_id, modbus_addr, descr);     // create new PZEM object
+            return addPZEM(port_id, pz);
             break;
         }
         case pzmbus::pzmodel_t::pzem003 : {
-            auto pz = std::unique_ptr<PZEM>(new PZ003(pzem_id, modbus_addr, descr));     // create new PZEM object
-            return addPZEM(port_id, pz.get());
+            auto pz = new PZ003(pzem_id, modbus_addr, descr);     // create new PZEM object
+            return addPZEM(port_id, pz);
             break;
         }
         default:
