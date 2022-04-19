@@ -15,25 +15,26 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include <cmath>
 
 // Read-Only 16-bit registers
-#define REG_VOLTAGE             0x0000  // 1LSB correspond to 0.1 V
-#define REG_CURRENT_L           0x0001  // 1LSB correspond to 0.001 A
-#define REG_CURRENT_H           0X0002
-#define REG_POWER_L             0x0003  // 1LSB correspond to 0.1 W
-#define REG_POWER_H             0x0004
-#define REG_ENERGY_L            0x0005  // 1LSB correspond to 1 W*h
-#define REG_ENERGY_H            0x0006
-#define REG_FREQUENCY           0x0007  // 1LSB correspond to 0.1 Hz
-#define REG_PF                  0x0008  // 1LSB correspond to 0.01
-#define REG_ALARM_H             0x0009  // 0xFFFF is alarm / 0x0000 is not alarm
-#define REG_METER_DATA_START    REG_VOLTAGE
-#define REG_METER_DATA_LEN      0x0A
-#define REG_METER_RESP_LEN      0x14
+#define PZ004_RIR_VOLTAGE       0x0000  // 1LSB correspond to 0.1 V
+#define PZ004_RIR_CURRENT_L     0x0001  // 1LSB correspond to 0.001 A
+#define PZ004_RIR_CURRENT_H     0X0002
+#define PZ004_RIR_POWER_L       0x0003  // 1LSB correspond to 0.1 W
+#define PZ004_RIR_POWER_H       0x0004
+#define PZ004_RIR_ENERGY_L      0x0005  // 1LSB correspond to 1 W*h
+#define PZ004_RIR_ENERGY_H      0x0006
+#define PZ004_RIR_FREQUENCY     0x0007  // 1LSB correspond to 0.1 Hz
+#define PZ004_RIR_PF            0x0008  // 1LSB correspond to 0.01
+#define PZ004_RIR_ALARM_H       0x0009  // 0xFFFF is alarm / 0x0000 is not alarm
+
+#define PZ004_RIR_DATA_BEGIN    0x0000
+#define PZ004_RIR_DATA_LEN      0x0A
+#define PZ004_RIR_RESP_LEN      0x14
 
 // RW 16-bit registers
-#define WREG_ALARM_THR          0x0001  // Alarm threshold, 1LSB correspond to 1W
-#define WREG_ADDR               0x0002  // MODBUS Slave address register   (The range is 0x0001~0x00F7)
-#define WREG_BEGIN              WREG_ALARM_THR
-#define WREG_LEN                2
+#define PZ004_RHR_ALARM_THR     0x0001  // Alarm threshold, 1LSB correspond to 1W
+#define PZ004_RHR_MODBUS_ADDR   0x0002  // MODBUS Slave address register   (The range is 0x0001~0x00F7)
+#define PZ004_RHR_BEGIN         0x0001
+#define PZ004_RHR_LEN           2
 
 
 // Commands
@@ -84,7 +85,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define PZ003_RIR_ENERGY_H      0x05
 #define PZ003_RIR_ALARM_H       0x06    // 0xFFFF is alarm,0x0000 is not alarm
 #define PZ003_RIR_ALARM_L       0x07    // 0xFFFF is alarm,0x0000 is not alarm
-#define PZ003_RIR_DATA_BEGIN    PZ003_RIR_VOLTAGE    // 8 regs total
+#define PZ003_RIR_DATA_BEGIN    0x00    // 8 regs total
 #define PZ003_RIR_DATA_LEN      0x08    // 8 regs total
 #define PZ003_RIR_RESP_LEN      0x10    // resp len is 16 bytes
 
@@ -93,7 +94,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #define PZ003_RHR_ALARM_L       0x01    // 1LSB correspond to 0.01 A
 #define PZ003_RHR_ADDR          0x02    // 1LSB correspond to 0.1 W
 #define PZ003_RHR_CURRENT_RANGE 0x03    // 0x0000：100A 0x0001：50A 0x0002：200A 0x0003：300A
-#define PZ003_RHR_BEGIN         PZ003_RHR_ALARM_H
+#define PZ003_RHR_BEGIN         0x00
 #define PZ003_RHR_CNT           4       // number of RHR regs
 
 // ESP32 is little endian here
@@ -241,51 +242,9 @@ struct metrics : pzmbus::metrics {
     uint16_t pf=0;
     uint16_t alarm=0;
 
-    float asFloat(pzmbus::meter_t m) const override {
-        switch (m)
-        {
-        case pzmbus::meter_t::vol :
-            return voltage / 10.0;
-            break;
-        case pzmbus::meter_t::cur :
-            return current / 1000.0;
-            break;
-        case pzmbus::meter_t::pwr :
-            return power / 10.0;
-            break;
-        case pzmbus::meter_t::enrg :
-            return static_cast< float >(energy);
-            break;
-        case pzmbus::meter_t::frq :
-            return freq / 10.0;
-            break;
-        case pzmbus::meter_t::pf :
-            return pf / 100.0;
-            break;
-        case pzmbus::meter_t::alrmh :
-            return alarm ? 1.0 : 0.0;
-            break;
-        default:
-            return NAN;
-        }
-    }
-
-    bool parse_rx_msg(const RX_msg *m) override {
-        if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != REG_METER_RESP_LEN)
-            return false;
-        ESP_LOGD(TAG, "PZ004 RXparser\n");
-
-        uint8_t const *value = &m->rawdata[3];
-
-        voltage = __builtin_bswap16(*(uint16_t*)&value[REG_VOLTAGE*2]);
-        current = __builtin_bswap16(*(uint16_t*)&value[REG_CURRENT_L*2]) | __builtin_bswap16(*(uint16_t*)&value[REG_CURRENT_H*2])  << 16;
-        power   = __builtin_bswap16(*(uint16_t*)&value[REG_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[REG_POWER_H*2])    << 16;
-        energy  = __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[REG_ENERGY_H*2])   << 16;
-        freq    = __builtin_bswap16(*(uint16_t*)&value[REG_FREQUENCY*2]);
-        pf      = __builtin_bswap16(*(uint16_t*)&value[REG_PF*2]);
-        alarm   = __builtin_bswap16(*(uint16_t*)&value[REG_ALARM_H*2]);
-        return true;
-    }
+    float asFloat(pzmbus::meter_t m) const override;
+    
+    bool parse_rx_msg(const RX_msg *m) override;
 };
 
 /**
@@ -308,58 +267,7 @@ struct state : pzmbus::state {
      * @return true on success
      * @return false on error
      */
-    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override {
-        if (!m->valid && skiponbad)          // check if message is valid before parsing it further
-            return false;
-
-        if (m->addr != addr && skiponbad)    // this is not "my" packet
-            return false;
-
-        switch (static_cast<pzmbus::pzemcmd_t>(m->cmd)){
-            case pzmbus::pzemcmd_t::RIR : {
-                if(data.parse_rx_msg(m))  // try to parse it as a full metrics packet
-                    break;
-                else {
-                    err = pzmbus::pzem_err_t::err_parse;
-                    return false;
-                }
-            }
-            case pzmbus::pzemcmd_t::RHR : {
-                if (m->rawdata[2] == WREG_LEN * 2){ // we got full len RHR data
-                    alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
-                    addr = m->rawdata[6];
-                }
-                // unknown regs
-                break;
-            }
-            case pzmbus::pzemcmd_t::WSR : {
-                // 4th byte is reg ADDR_L
-                if (m->rawdata[3] == WREG_ADDR){
-                    addr = m->rawdata[5];            // addr is only one byte
-                    break;
-                } else if(m->rawdata[3] == WREG_ALARM_THR){
-                    alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[4]);
-                }
-                break;
-            }
-            case pzmbus::pzemcmd_t::reset_energy :
-                data.energy=0;                      // nothing to do, except reset conter
-                break;
-            case pzmbus::pzemcmd_t::read_err :
-            case pzmbus::pzemcmd_t::write_err :
-            case pzmbus::pzemcmd_t::reset_err :
-            case pzmbus::pzemcmd_t::calibrate_err :
-                // стоит ли здесь инвалидировать метрики???
-                err = (pzmbus::pzem_err_t)m->rawdata[2];
-                return true;
-            default:
-                break;
-        }
-
-        err = pzmbus::pzem_err_t::err_ok;
-        update_us = esp_timer_get_time();
-        return true;
-    }
+    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override;
 
 };
 
@@ -438,7 +346,7 @@ void rx_msg_prettyp(const RX_msg *m);
 // Implementation for PZEM003
 namespace pz003 {
 
-// Enumeration of available MODBUS commands
+// Enumeration of available shunt values
 enum class shunt_t:uint8_t {
     type_100A = 0,
     type_50A  = 1,
@@ -460,45 +368,9 @@ struct metrics : pzmbus::metrics {
     uint16_t alarmh=0;
     uint16_t alarml=0;
 
-    float asFloat(pzmbus::meter_t m) const override {
-        switch (m){
-        case pzmbus::meter_t::vol :
-            return voltage / 100.0;
-            break;
-        case pzmbus::meter_t::cur :
-            return current / 100.0;
-            break;
-        case pzmbus::meter_t::pwr :
-            return power / 10.0;
-            break;
-        case pzmbus::meter_t::enrg :
-            return static_cast< float >(energy);
-            break;
-        case pzmbus::meter_t::alrmh :
-            return alarmh ? 1.0 : 0.0;
-            break;
-        case pzmbus::meter_t::alrml :
-            return alarml ? 1.0 : 0.0;
-            break;
-        default:
-            return NAN;
-        }
-    }
+    float asFloat(pzmbus::meter_t m) const override;
 
-    bool parse_rx_msg(const RX_msg *m) override {
-        if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != PZ003_RIR_RESP_LEN)
-            return false;
-
-        uint8_t const *value = &m->rawdata[3];
-
-        voltage = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_VOLTAGE*2]);
-        current = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_CURRENT*2]);
-        power   = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_H*2])    << 16;
-        energy  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_H*2])   << 16;
-        alarmh  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ALARM_H*2]);
-        alarml  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ALARM_L*2]);
-        return true;
-    }
+    bool parse_rx_msg(const RX_msg *m) override;
 };
 
 /**
@@ -524,72 +396,7 @@ struct state : pzmbus::state {
      * @return true on success
      * @return false on error
      */
-    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override {
-        if (!m->valid && skiponbad)          // check if message is valid before parsing it further
-            return false;
-
-        if (m->addr != addr && skiponbad)    // this is not "my" packet
-            return false;
-
-        switch (static_cast<pzmbus::pzemcmd_t>(m->cmd)){
-            case pzmbus::pzemcmd_t::RIR : {
-                if(data.parse_rx_msg(m))  // try to parse it as a full metrics packet
-                    break;
-                else {
-                    err = pzmbus::pzem_err_t::err_parse;
-                    return false;
-                }
-                break;
-            }
-            case pzmbus::pzemcmd_t::RHR : {
-                if (m->rawdata[2] == PZ003_RHR_CNT * 2){ // we got full len RHR data
-                    alrmh_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
-                    alrml_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[5]);
-                    addr = m->rawdata[6];
-                    irange = m->rawdata[8];
-                }
-                // unknown regs
-                break;
-            }
-            case pzmbus::pzemcmd_t::WSR : {
-                // 4th byte is reg ADDR_L
-                switch (m->rawdata[3]){
-                    case PZ003_RHR_ALARM_H :
-                        alrmh_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[4]);
-                        break;
-                    case PZ003_RHR_ALARM_L :
-                        alrml_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[4]);
-                        break;
-                    case PZ003_RHR_ADDR :
-                        addr = m->rawdata[5];            // addr is only one byte
-                        break;
-                    case PZ003_RHR_CURRENT_RANGE :
-                        irange = m->rawdata[5];          // shunt is only one byte
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            }
-            case pzmbus::pzemcmd_t::reset_energy :
-                data.energy=0;                      // nothing to do, except reset conter
-                break;
-            case pzmbus::pzemcmd_t::read_err :
-            case pzmbus::pzemcmd_t::write_err :
-            case pzmbus::pzemcmd_t::reset_err :
-            case pzmbus::pzemcmd_t::calibrate_err :
-                // стоит ли здесь инвалидировать метрики???
-                err = (pzmbus::pzem_err_t)m->rawdata[2];
-                return true;
-                break;
-            default:
-                break;
-        }
-
-        err = pzmbus::pzem_err_t::err_ok;
-        update_us = esp_timer_get_time();
-        return true;
-    }
+    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override;
 
 };
 

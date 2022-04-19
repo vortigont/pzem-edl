@@ -41,7 +41,7 @@ TX_msg* cmd_set_modbus_addr(uint8_t new_addr, const uint8_t current_addr){
     if(new_addr < ADDR_MIN || new_addr > ADDR_ANY)
         new_addr = current_addr;    // keep the old address if new one is out of allowed range
 
-    return create_msg(static_cast<uint8_t>(pzemcmd_t::WSR), WREG_ADDR, new_addr, current_addr);
+    return create_msg(static_cast<uint8_t>(pzemcmd_t::WSR), PZ004_RHR_MODBUS_ADDR, new_addr, current_addr);
 }
 
 TX_msg* cmd_energy_reset(const uint8_t addr){
@@ -64,11 +64,11 @@ namespace pz004 {
 using namespace pzmbus;
 
 TX_msg* cmd_get_metrics(uint8_t addr){
-    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::RIR), REG_METER_DATA_START, REG_METER_DATA_LEN, addr);
+    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::RIR), PZ004_RIR_DATA_BEGIN, PZ004_RIR_DATA_LEN, addr);
 }
 
 TX_msg* cmd_get_opts(const uint8_t addr){
-    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::RHR), WREG_BEGIN, WREG_LEN, addr);
+    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::RHR), PZ004_RHR_BEGIN, PZ004_RHR_LEN, addr);
 };
 
 TX_msg* cmd_set_modbus_addr(uint8_t new_addr, const uint8_t current_addr){return pzmbus::cmd_set_modbus_addr(new_addr, current_addr);}
@@ -78,7 +78,7 @@ TX_msg* cmd_get_modbus_addr(const uint8_t addr){ return cmd_get_opts(addr); }
 TX_msg* cmd_get_alarm_thr(const uint8_t addr){ return cmd_get_opts(addr); }
 
 TX_msg* cmd_set_alarm_thr(uint16_t w, const uint8_t addr){
-    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::WSR), WREG_ALARM_THR, w, addr);
+    return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::WSR), PZ004_RHR_ALARM_THR, w, addr);
 }
 
 TX_msg* cmd_energy_reset(const uint8_t addr){return pzmbus::cmd_energy_reset(addr);}
@@ -108,9 +108,9 @@ void rx_msg_prettyp(const RX_msg *m){
             break;
         }
         case pzemcmd_t::WSR : {
-            if (m->rawdata[3] == WREG_ADDR){
+            if (m->rawdata[3] == PZ004_RHR_MODBUS_ADDR){
                 printf("Device MODBUS address changed to:\t%d\n", pz.addr);
-            } else if (m->rawdata[3] == WREG_ALARM_THR){
+            } else if (m->rawdata[3] == PZ004_RHR_ALARM_THR){
                 printf("Alarm threshold value changed to:\t%d\n", pz.alrm_thrsh);
             } else {
                 printf("Unknown WSR value\n");
@@ -127,7 +127,104 @@ void rx_msg_prettyp(const RX_msg *m){
     }
 }
 
+float metrics::asFloat(pzmbus::meter_t m) const {
+    switch (m)
+    {
+    case pzmbus::meter_t::vol :
+        return voltage / 10.0;
+        break;
+    case pzmbus::meter_t::cur :
+        return current / 1000.0;
+        break;
+    case pzmbus::meter_t::pwr :
+        return power / 10.0;
+        break;
+    case pzmbus::meter_t::enrg :
+        return static_cast< float >(energy);
+        break;
+    case pzmbus::meter_t::frq :
+        return freq / 10.0;
+        break;
+    case pzmbus::meter_t::pf :
+        return pf / 100.0;
+        break;
+    case pzmbus::meter_t::alrmh :
+        return alarm ? 1.0 : 0.0;
+        break;
+    default:
+        return NAN;
+    }
+}
 
+bool metrics::parse_rx_msg(const RX_msg *m) {
+    if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != PZ004_RIR_RESP_LEN)
+        return false;
+    ESP_LOGD(TAG, "PZ004 RXparser\n");
+
+    uint8_t const *value = &m->rawdata[3];
+
+    voltage = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_VOLTAGE*2]);
+    current = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_CURRENT_L*2]) | __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_CURRENT_H*2])  << 16;
+    power   = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_POWER_H*2])    << 16;
+    energy  = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_ENERGY_H*2])   << 16;
+    freq    = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_FREQUENCY*2]);
+    pf      = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_PF*2]);
+    alarm   = __builtin_bswap16(*(uint16_t*)&value[PZ004_RIR_ALARM_H*2]);
+    return true;
+}
+
+bool state::parse_rx_mgs(const RX_msg *m, bool skiponbad) {
+    if (!m->valid && skiponbad)          // check if message is valid before parsing it further
+        return false;
+
+    if (m->addr != addr && skiponbad)    // this is not "my" packet
+        return false;
+
+    switch (static_cast<pzmbus::pzemcmd_t>(m->cmd)){
+        case pzmbus::pzemcmd_t::RIR : {
+            if(data.parse_rx_msg(m))  // try to parse it as a full metrics packet
+                break;
+            else {
+                err = pzmbus::pzem_err_t::err_parse;
+                return false;
+            }
+        }
+        case pzmbus::pzemcmd_t::RHR : {
+            if (m->rawdata[2] == PZ004_RHR_LEN * 2){ // we got full len RHR data
+                alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
+                addr = m->rawdata[6];
+            }
+            // unknown regs
+            break;
+        }
+        case pzmbus::pzemcmd_t::WSR : {
+            // 4th byte is reg ADDR_L
+            if (m->rawdata[3] == PZ004_RHR_MODBUS_ADDR){
+                addr = m->rawdata[5];            // addr is only one byte
+                break;
+            } else if(m->rawdata[3] == PZ004_RHR_ALARM_THR){
+                alrm_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[4]);
+            }
+            break;
+        }
+        case pzmbus::pzemcmd_t::reset_energy :
+            data.energy=0;                      // nothing to do, except reset conter
+            break;
+        case pzmbus::pzemcmd_t::read_err :
+        case pzmbus::pzemcmd_t::write_err :
+        case pzmbus::pzemcmd_t::reset_err :
+        case pzmbus::pzemcmd_t::calibrate_err :
+            // стоит ли здесь инвалидировать метрики???
+            err = (pzmbus::pzem_err_t)m->rawdata[2];
+            return true;
+        default:
+            break;
+    }
+
+    err = pzmbus::pzem_err_t::err_ok;
+    update_us = esp_timer_get_time();
+    return true;
+}
 
 }  // end of 'namespace pz004'
 
@@ -218,6 +315,113 @@ void rx_msg_prettyp(const RX_msg *m){
             // To be DONE....
             break;
     }
+}
+
+float metrics::asFloat(pzmbus::meter_t m) const {
+    switch (m){
+    case pzmbus::meter_t::vol :
+        return voltage / 100.0;
+        break;
+    case pzmbus::meter_t::cur :
+        return current / 100.0;
+        break;
+    case pzmbus::meter_t::pwr :
+        return power / 10.0;
+        break;
+    case pzmbus::meter_t::enrg :
+        return static_cast< float >(energy);
+        break;
+    case pzmbus::meter_t::alrmh :
+        return alarmh ? 1.0 : 0.0;
+        break;
+    case pzmbus::meter_t::alrml :
+        return alarml ? 1.0 : 0.0;
+        break;
+    default:
+        return NAN;
+    }
+}
+
+bool metrics::parse_rx_msg(const RX_msg *m) {
+    if (static_cast<pzmbus::pzemcmd_t>(m->cmd) != pzmbus::pzemcmd_t::RIR || m->rawdata[2] != PZ003_RIR_RESP_LEN)
+        return false;
+
+    uint8_t const *value = &m->rawdata[3];
+
+    voltage = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_VOLTAGE*2]);
+    current = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_CURRENT*2]);
+    power   = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_L*2])   | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_POWER_H*2])    << 16;
+    energy  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_L*2])  | __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ENERGY_H*2])   << 16;
+    alarmh  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ALARM_H*2]);
+    alarml  = __builtin_bswap16(*(uint16_t*)&value[PZ003_RIR_ALARM_L*2]);
+    return true;
+}
+
+bool state::parse_rx_mgs(const RX_msg *m, bool skiponbad) {
+    if (!m->valid && skiponbad)          // check if message is valid before parsing it further
+        return false;
+
+    if (m->addr != addr && skiponbad)    // this is not "my" packet
+        return false;
+
+    switch (static_cast<pzmbus::pzemcmd_t>(m->cmd)){
+        case pzmbus::pzemcmd_t::RIR : {
+            if(data.parse_rx_msg(m))  // try to parse it as a full metrics packet
+                break;
+            else {
+                err = pzmbus::pzem_err_t::err_parse;
+                return false;
+            }
+            break;
+        }
+        case pzmbus::pzemcmd_t::RHR : {
+            if (m->rawdata[2] == PZ003_RHR_CNT * 2){ // we got full len RHR data
+                alrmh_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[3]);
+                alrml_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[5]);
+                addr = m->rawdata[6];
+                irange = m->rawdata[8];
+            }
+            // unknown regs
+            break;
+        }
+        case pzmbus::pzemcmd_t::WSR : {
+            // 4th byte is reg ADDR_L
+            switch (m->rawdata[3]){
+                case PZ003_RHR_ALARM_H :
+                    alrmh_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[4]);
+                    break;
+                case PZ003_RHR_ALARM_L :
+                    alrml_thrsh = __builtin_bswap16(*(uint16_t*)&m->rawdata[4]);
+                    break;
+                case PZ003_RHR_ADDR :
+                    addr = m->rawdata[5];            // addr is only one byte
+                    break;
+                case PZ003_RHR_CURRENT_RANGE :
+                    irange = m->rawdata[5];          // shunt is only one byte
+                    break;
+                default:
+                    break;
+            }
+            break;
+        }
+        case pzmbus::pzemcmd_t::reset_energy :
+            data.energy=0;                      // nothing to do, except reset conter
+            break;
+        case pzmbus::pzemcmd_t::read_err :
+        case pzmbus::pzemcmd_t::write_err :
+        case pzmbus::pzemcmd_t::reset_err :
+        case pzmbus::pzemcmd_t::calibrate_err :
+            // стоит ли здесь инвалидировать метрики???
+            err = (pzmbus::pzem_err_t)m->rawdata[2];
+            return true;
+            break;
+        default:
+            break;
+    }
+
+    err = pzmbus::pzem_err_t::err_ok;
+    update_us = esp_timer_get_time();
+    return true;
 }
 
 }  // end of 'namespace pz003'
