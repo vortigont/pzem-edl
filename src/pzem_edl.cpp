@@ -217,20 +217,28 @@ bool PZPool::addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbu
     if(!port_by_id(port_id) || pzem_by_id(pzem_id))
         return false;       // either port is missing or pzem with this id already exist
 
+    PZEM *pz;
+
     switch (model){
         case pzmbus::pzmodel_t::pzem004v3 : {
-            auto pz = new PZ004(pzem_id, modbus_addr, descr);     // create new PZEM object
-            return addPZEM(port_id, pz);
+            pz = new PZ004(pzem_id, modbus_addr, descr);     // create new PZEM004 object
             break;
         }
         case pzmbus::pzmodel_t::pzem003 : {
-            auto pz = new PZ003(pzem_id, modbus_addr, descr);     // create new PZEM object
-            return addPZEM(port_id, pz);
+            pz = new PZ003(pzem_id, modbus_addr, descr);     // create new PZEM003 object
             break;
         }
         default:
             return false;
     }
+
+    if (addPZEM(port_id, pz))
+        return true;
+    else {
+        delete pz;
+        return false;
+    }
+
 };
 
 // TODO: возвращать код ошибки
