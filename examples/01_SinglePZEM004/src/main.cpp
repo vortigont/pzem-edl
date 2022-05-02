@@ -10,8 +10,7 @@ Copyright (C) Emil Muratov, 2021
 GitHub: https://github.com/vortigont/pzem-edl
 */
 
-#include "main.h"
-// #include "pzem_edl.hpp"
+#include "main.h"           // #include "pzem_edl.hpp"   library header
 
 using namespace pz004;     // we will need this namespace for PZEM004v3.0 device
 
@@ -86,7 +85,7 @@ void setup(){
     */ 
     Serial.println("We can do some funny stuff while PZEM is preparing a reply");
 
-    // OK, 1000 ms is too long to print garbage, let's just take some sleep
+    // OK, 100 ms is too long to print garbage, let's just take some sleep
     delay(200);     // for 200 ms
 
     // now we should have some response with updated values, let's check again
@@ -97,6 +96,11 @@ void setup(){
 
     // let's check other metrics
     Serial.printf("PZEM current: %u (mA)\n", m->current);
+    Serial.printf("PZEM power: %u (dW)\n", m->power);
+    Serial.printf("PZEM energy: %u (Wh)\n", m->energy);
+    Serial.printf("PZEM frequency: %u (dHz)\n", m->freq);
+    Serial.printf("PZEM Power Factor: %u (<1)\n", m->pf);
+
 
     // Or if someone likes floats instead? (I don't)
     Serial.printf("PZEM current as float: %.3f (Amps)\n", m->asFloat(pzmbus::meter_t::cur));      // allowed arguments are in enum meter_t:uint8_t { vol, cur, pwr, enrg, frq, pf, alrm }
@@ -122,7 +126,7 @@ void setup(){
    int times = 5;
    do {
        long t = random(5000);
-        Serial.printf("Going to sleep for %ld ms\n", t);
+        Serial.printf("Going to sleep for %ld ms...\n", t);
         delay(t);
 
         Serial.println("Wake up!");
@@ -179,13 +183,13 @@ void mycallback(uint8_t id, const RX_msg* m){
 /*
     It is possible to obtain a fresh new data same way as before
 
-    Serial.printf("PZEM current as float: %.3f (Amps)\n", pz->getMetricsPZ004()->asFloat(pzmbus::meter_t::cur));
+    Serial.printf("PZEM current as float: %.3f (Amps)\n", m->getMetricsPZ004()->asFloat(pzmbus::meter_t::cur));
 */
 
 /*
     It is also possible to work directly on a raw data from PZEM
     let's call for a little help here and use a pretty_printer() function
-    that parses and prints RX_msg to the stdout
+    that parses and prints RX_msg to stdout
 */
     rx_msg_prettyp(m);
 
