@@ -139,6 +139,11 @@ void PZ004::rx_sink(const RX_msg *msg){
     }
 };
 
+void PZ004::resetEnergyCounter(){
+    TX_msg* cmd = pz004::cmd_energy_reset(pz.addr);
+    q->txenqueue(cmd);                    // there is no error handling by default, just need to check E-counter on a next cycle
+}
+
 
 // ****  PZEM003 Implementation  **** //
 void PZ003::updateMetrics(){
@@ -166,6 +171,11 @@ void PZ003::rx_sink(const RX_msg *msg){
             rx_callback(id, msg);       // run external call-back function
     }
 };
+
+void PZ003::resetEnergyCounter(){
+    TX_msg* cmd = pz003::cmd_energy_reset(pz.addr);
+    q->txenqueue(cmd);                    // there is no error handling by default, just need to check E-counter on a next cycle
+}
 
 
 
@@ -417,4 +427,13 @@ const pzmbus::metrics* PZPool::getMetrics(uint8_t id) const {
         return pz->getMetrics();
 
     return nullptr;
+}
+
+void PZPool::resetEnergyCounter(uint8_t pzem_id){
+    for (auto &i : meters){
+        if (i->pzem->id == pzem_id){
+            i->pzem->resetEnergyCounter();
+            return;
+        }
+    }
 }

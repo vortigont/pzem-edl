@@ -32,7 +32,7 @@ class PZEM {
     bool sink_lock = false;             // flag marking rx_sink as an active call-back when attached
 
 protected:
-    MsgQ *q = nullptr;                 // UartQ sink for TX messages
+    MsgQ *q = nullptr;                  // UartQ sink for TX messages
     rx_callback_t rx_callback = nullptr;          // external callback to trigger on RX data
 
 
@@ -165,6 +165,11 @@ public:
      */
     virtual const pzmbus::metrics* getMetrics() const = 0; // const { return &pz.data; }
 
+    /**
+     * @brief send a command to PZEM device to reset it's internal energy counter
+     * 
+     */
+    virtual void resetEnergyCounter() = 0;
 
 private:
     TimerHandle_t t_poller=nullptr;
@@ -237,6 +242,12 @@ public:
      */
     void rx_sink(const RX_msg *msg) override;
 
+    /**
+     * @brief send a command to PZEM device to reset it's internal energy counter
+     * 
+     */
+    void resetEnergyCounter() override;
+
 };
 
 
@@ -303,6 +314,11 @@ public:
      */
     void rx_sink(const RX_msg *msg) override;
 
+    /**
+     * @brief send a command to PZEM device to reset it's internal energy counter
+     * 
+     */
+    void resetEnergyCounter() override;
 };
 
 /**
@@ -449,6 +465,16 @@ public:
      * 
      */
     void updateMetrics();
+
+
+    /**
+     * @brief send a command to PZEM device in a pool with specific id to reset it's internal energy counter
+     * NOTE: pzem_id is NOT a MODBUS address, it's PZEM id in a pool. If no PZEM device with this ID
+     * in a pool, than this call does nothing
+     * 
+     */
+    void resetEnergyCounter(uint8_t pzem_id);
+
 
     /**
      * @brief Get the PZEM State object reference for PZEM with specific id
