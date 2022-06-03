@@ -1,6 +1,9 @@
 # Change Log
 
+## v 1.0.3 (2022-06-03)
+ + added  PZEM::resetEnergyCounter(), PZPool::resetEnergyCounter() methods
  * fix: PZPool::addPZEM() method unable to create new PZEM objects in the pool
+ * some code and examples refactoring
 
 ## v 1.0.2 (2022-04-06)
  * fix stale data calculation
