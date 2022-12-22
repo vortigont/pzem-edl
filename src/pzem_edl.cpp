@@ -282,7 +282,7 @@ bool PZPool::addPZEM(const uint8_t port_id, PZEM *pz){
 bool PZPool::removePZEM(const uint8_t pzem_id){
     for (int i = 0; i != meters.size(); ++i) {
         if (meters[i]->pzem->id == pzem_id){
-            meters.remove(i);
+            meters.unlink(i);
             return true;
         }
     }
@@ -331,20 +331,17 @@ std::shared_ptr<PZPort> PZPool::port_by_id(uint8_t id){
 }
 
 const PZEM* PZPool::pzem_by_id(uint8_t id) const {
-    for (auto _i = meters.cbegin(); _i != meters.cend(); ++_i){
-        const auto i = *_i;
-        if (i->pzem->id == id)
-            return i->pzem.get();
+    for (auto i = meters.cbegin(); i != meters.cend(); ++i){
+        if (i->get()->pzem->id == id)
+            return i->get()->pzem.get();
     }
+
 /*
-    // auto discards const qualifiers
-    const auto &m = meters;
-    for (const auto &i : m){
+    for (const auto &i : std::as_const(meters)){        // std::as_const req c++17
         if (i->pzem->id == id)
             return i->pzem.get();
     }
 */
-
     return nullptr;
 }
 
@@ -390,10 +387,7 @@ bool PZPool::setPollrate(size_t t){
     if (t<POLLER_MIN_PERIOD)
         return false;
 
-    if( xTimerChangePeriod( t_poller, t / portTICK_PERIOD_MS, TIMER_CMD_TIMEOUT ) == pdPASS )
-        return true;
-
-return false;
+    return ( xTimerChangePeriod( t_poller, t / portTICK_PERIOD_MS, TIMER_CMD_TIMEOUT ) == pdPASS );
 }
 
 void PZPool::attach_rx_callback(rx_callback_t f){
