@@ -289,16 +289,7 @@ private:
      * @brief start task handling UART RX queue events
      * 
      */
-    bool start_rx_msg_q(){
-        if (!rx_msg_q)      // avoid working on non-allocated queue
-            return false;
-
-        //Create a task to handle UART event from ISR
-        if (!t_rxq)
-            return xTaskCreate(UartQ::rxTask, EVT_TASK_NAME, EVT_TASK_STACK, (void *)this, EVT_TASK_PRIO, &t_rxq) == pdPASS;
-        else
-            return true;
-    }
+    bool start_rx_msg_q();
 
     /**
      * @brief stop task handling UART RX queue events
@@ -310,21 +301,7 @@ private:
      * @brief start task handling TX msg queue events
      * 
      */
-    bool start_TX_msg_queue(){
-        if (tx_msg_q)           // queue already exist
-            return true;
-
-        tx_msg_q = xQueueCreate( tx_msg_q_DEPTH, sizeof(TX_msg*) ); // make q for MSG struct pointers
-
-        if (!tx_msg_q)
-            return false;
-
-        //Create a task to handle UART event from ISR
-        if (!t_txq)
-            return xTaskCreate(UartQ::txTask, TXQ_TASK_NAME, TXQ_TASK_STACK, (void *)this, TXQ_TASK_PRIO, &t_txq) == pdPASS;
-        else
-            return true;
-    }
+    bool start_TX_msg_queue();
 
     /**
      * @brief stop task handling TX msg queue events
@@ -348,122 +325,13 @@ private:
      * once this object is passed to the call-back function - it is up to the calee
      * to maintaint life-time of the object. Once utilised it MUST be 'delete'ed to prevent mem leaks
      */
-    void rxqueuehndlr(){
-        uart_event_t event;
-
-        // Task runs inside Infinite loop
-        for (;;){
-            xSemaphoreGive(rts_sem);                // сигналим что можно отправлять следующий пакет и мы готовы ловить ответ
-
-            // 'xQueueReceive' will "sleep" untill an event messages arrives from the RX event queue
-            if(xQueueReceive(rx_msg_q, (void*)&event, (portTickType)portMAX_DELAY)) {
-
-                //Handle received event
-                switch(event.type) {
-                    case UART_DATA: {
-                        if (!rx_callback){              // if there is no RX handler, than discard all RX
-                            uart_flush_input(port);
-                            xQueueReset(rx_msg_q);
-                            break;
-                        }
-
-                        size_t datalen = 0;
-                        ESP_ERROR_CHECK(uart_get_buffered_data_len(port, &datalen));
-                        if (0 == datalen){
-                            ESP_LOGD(TAG, "can't retreive RX data from buffer, t: %lld", esp_timer_get_time()/1000);
-                            uart_flush_input(port);
-                            xQueueReset(rx_msg_q);
-                            break;
-                        }
-
-                        ESP_LOGD(TAG, "RX buff has %u bytes data msg, t: %lld", datalen, esp_timer_get_time()/1000);
-
-                        uint8_t* buff = (uint8_t*) malloc(datalen);
-                        if (buff){
-                            datalen = uart_read_bytes(port, buff, datalen, PZEM_UART_RX_READ_TICKS);
-                            if (!datalen){
-                                ESP_LOGD(TAG, "unable to read data from RX buff");
-                                delete[] buff;
-                                uart_flush_input(port);
-                                xQueueReset(rx_msg_q);
-                                break;
-                            }
-
-                            RX_msg *msg = new RX_msg(buff, datalen);
-
-                            #ifdef PZEM_EDL_DEBUG
-                                ESP_LOGD(TAG, "got RX data packet from buff, len: %d, t: %ld", datalen, esp_timer_get_time()/1000);
-                                rx_msg_debug(msg);
-                            #endif
-
-                            rx_callback(msg);                   // call external function to process PZEM message
-                        } else
-                            uart_flush_input(port);             // если маллок не выдал память - очищаем весь инпут
-
-                        break;
-                    }
-                    case UART_FIFO_OVF:
-                        ESP_LOGW(TAG, "UART RX fifo overflow!");
-                        xQueueReset(rx_msg_q);
-                        break;
-                    case UART_BUFFER_FULL:
-                        ESP_LOGW(TAG, "UART RX ringbuff full");
-                        uart_flush_input(port);
-                        xQueueReset(rx_msg_q);
-                        break;
-                    case UART_BREAK:
-                    case UART_FRAME_ERR:
-                        ESP_LOGW(TAG, "UART RX err");
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-        }
-        // Task needs to self-terminate before returning (but we should not ever reach this point anyway)
-        vTaskDelete(NULL);
-    }
-
+    void rxqueuehndlr();
 
     /**
      * @brief TX message Queue handler function
      * 
      */
-    void txqueuehndlr(){
-
-        TX_msg* msg = nullptr;
-
-        // Task runs inside Infinite loop
-        for (;;){
-            // 'xQueueReceive' will "sleep" untill some message arrives from the msg queue
-            if(xQueueReceive(tx_msg_q, &(msg), (portTickType)portMAX_DELAY)) {
-
-                // if smg would expect a reply than I need to grab a semaphore from the RX queue task
-                if (msg->w4rx){
-                    ESP_LOGD(TAG, "Wait for tx semaphore, t: %lld", esp_timer_get_time()/1000);
-                    xSemaphoreTake(rts_sem, pdMS_TO_TICKS(PZEM_UART_TIMEOUT));
-                    // an old reply migh be still in the rx queue while I'm handling this one
-                    //uart_flush_input(port);     // input should be cleared from any leftovers if I expect a reply (in case of a timeout only)
-                    //xQueueReset(rx_msg_q);
-                }
-
-                // Send message data to the UART TX FIFO
-                uart_write_bytes(port, (const char*)msg->data, msg->len);
-
-                #ifdef PZEM_EDL_DEBUG
-                    ESP_LOGD(TAG, "TX - packet sent to uart FIFO, t: %ld", esp_timer_get_time()/1000);
-                    tx_msg_debug(msg);
-                #endif
-
-                // destroy message
-                delete msg;
-                msg = nullptr;
-            }
-        }
-        // Task needs to self-terminate before returning (but we should not ever reach this point anyway)
-        vTaskDelete(NULL);
-    }
+    void txqueuehndlr();
 
 };
 
@@ -477,13 +345,7 @@ class PZPort {
     bool qrun;
     std::unique_ptr<char[]> descr;
 
-    void setdescr(const char *_name){
-        if (!_name || !*_name){
-            descr = std::unique_ptr<char[]>(new char[9]);
-            sprintf(descr.get(), "Port-%d", id);
-        } else
-            descr = std::unique_ptr<char[]>(strcpy(new char[strlen(_name) + 1], _name));
-    }
+    void setdescr(const char *_name);
 
 
 public:
@@ -494,19 +356,9 @@ public:
     std::unique_ptr<MsgQ> q = nullptr;
 
     // Construct from generic MgsQ object
-    PZPort (uint8_t _id, MsgQ *mq, const char *_name=nullptr) : id(_id) {
-        //std::move(mq);
-        q.reset(mq);
-        setdescr(_name);
-        qrun = q->startQueues();
-    }
+    PZPort (uint8_t _id, MsgQ *mq, const char *_name=nullptr);
 
     // Construct a new UART port
-    PZPort (uint8_t _id, UART_cfg &cfg, const char *_name=nullptr) : id(_id) {
-        UartQ *_q = new UartQ(cfg.p, cfg.uartcfg, cfg.gpio_rx, cfg.gpio_tx);
-        q.reset(_q);
-        setdescr(_name);
-        qrun = q->startQueues();
-    }
+    PZPort (uint8_t _id, UART_cfg &cfg, const char *_name=nullptr);
 
 };
