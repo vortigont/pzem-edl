@@ -139,6 +139,7 @@ enum class pzem_err_t:uint8_t {
 
 // Abstract structure with metrics
 struct metrics {
+    virtual ~metrics(){};
     virtual float asFloat(meter_t m) const { return NAN; }
     virtual bool parse_rx_msg(const RX_msg *m){ return false; }
 };
@@ -154,6 +155,7 @@ struct state {
 
     // C-tor
     state (pzmodel_t m = pzmodel_t::none) : model(m){}
+    virtual ~state(){};
 
     /**
      * @brief return age time since last update in ms
@@ -242,9 +244,11 @@ struct metrics : pzmbus::metrics {
     uint16_t pf=0;
     uint16_t alarm=0;
 
+    virtual ~metrics(){};
+
     float asFloat(pzmbus::meter_t m) const override;
     
-    bool parse_rx_msg(const RX_msg *m) override;
+    virtual bool parse_rx_msg(const RX_msg *m) override;
 };
 
 /**
@@ -258,6 +262,7 @@ struct state : pzmbus::state {
 
     // C-tor - specify pzem model to base struct
     state () : pzmbus::state(pzmbus::pzmodel_t::pzem004v3) {}
+    virtual ~state(){};
 
     /**
      * @brief try to parse PZEM reply packet and update structure state
