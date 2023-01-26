@@ -23,6 +23,7 @@ Feel free to open a discussion topic on any questions.
     * collecting TimeSeries of metrics data
     * iterated circular buffers
     * PSRAM support
+ * DummyPZEM004 - a dummy object that provides some random metrics like a real PZEM004 device
 
 
 ### Supported modules
@@ -62,6 +63,10 @@ Now with event-driven approach:
 5) lib: _"no problem, leave it here, I will send it once uart is free "_
 5) than lib sleep waits until an event from uart comes that there is some data received
 6) it retreives data from buffer and pings user-code - _"here is your data, pick it up anytime"_
+
+### DummyPZEM004
+A Dummy abstration class that inheritcs PZEM004 but is a fake device stub. It behaves like it has a connection to real PZEM device but responds with a faked random meterings.
+Could be really handy for prototyping without the need to connect to a real PZEM devices.
 
 
 ### History

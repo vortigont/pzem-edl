@@ -1,5 +1,10 @@
 # Change Log
 
++ add DummyPZEM004 device with emulated metrics 
++ add NullQ and NullCable objects
+* trivial virtual destructors were missing body
+* minor code refactoring
+
 ## v 1.0.3 (2022-06-03)
  + added  PZEM::resetEnergyCounter(), PZPool::resetEnergyCounter() methods
  * fix: PZPool::addPZEM() method unable to create new PZEM objects in the pool
