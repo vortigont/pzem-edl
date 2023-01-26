@@ -191,6 +191,8 @@ private:
  *
  */
 class PZ004 : public PZEM {
+
+protected:
     pz004::state pz;                        // structure with PZEM004 state
 
 public:
@@ -209,13 +211,13 @@ public:
      * @brief return configured MODBUS address
      * 
      */
-    virtual uint8_t getaddr() const override { return pz.addr; }
+    uint8_t getaddr() const override { return pz.addr; }
 
     /**
      * @brief poll PZEM for metrics
      * on call a mesage with metrics request is send to PZEM device
      */
-    void updateMetrics() override;
+    virtual void updateMetrics() override;
 
     /**
      * @brief Get the PZEM State object reference
@@ -240,13 +242,13 @@ public:
      * 
      * @param msg 
      */
-    void rx_sink(const RX_msg *msg) override;
+    virtual void rx_sink(const RX_msg *msg) override;
 
     /**
      * @brief send a command to PZEM device to reset it's internal energy counter
      * 
      */
-    void resetEnergyCounter() override;
+    virtual void resetEnergyCounter() override;
 
 };
 
@@ -519,3 +521,98 @@ private:
     void rx_dispatcher(const RX_msg *msg, const uint8_t port_id);
 
 };
+
+
+/*
+  DummyPZEM uses long random() func from Arduono,
+  it breaks compat with ESP-IDF, so let's guard it
+  TODO: reimplement it for ESP-IDF
+*/
+#ifdef ARDUINO
+
+struct var_t {
+    uint8_t voltage;
+    uint8_t current;
+    uint8_t freq;
+    uint8_t pf;
+    var_t(uint8_t v, uint8_t c, uint8_t f, uint8_t pf) : voltage(v), current(c), freq(f), pf(pf) {};
+};
+
+/**
+ * @brief metrics randomizer
+ * it grabs a struct with PZ004 metrics data
+ * and tosses it's values, while keep counting for proper pwr/energy per time
+ * 
+ */
+class FakeMeterPZ004 {
+public:
+    // variances
+    pz004::metrics mt;
+    // randomise deviation thresholds (percents)
+    var_t deviate = var_t(8, 30, 3, 20);
+    // probability of randomizing a value on each poll, in 1/x
+    var_t prob = var_t(10, 5, 15, 10);
+
+    /**
+     * @brief reset all values to defaults
+     * 
+     */
+    void reset();
+
+    /**
+     * @brief toss metering variables
+     * using deviation and probability settings 
+     * 
+     */
+    void randomize(pz004::metrics& m);
+
+    /**
+     * @brief recalculate power/energy values based on time elapsed and current metrics
+     * 
+     */
+    void updnrg(pz004::metrics& m);
+
+protected:
+    uint64_t timecount = 0;     // in ms
+    uint32_t _nrg = 0;          // energy
+
+};
+
+
+/**
+ * @brief A fake PZEM004 device class
+ * it pretends to be PZEM004 class but does not talk via serial to the real device,
+ * it just provides some random meterings. Could be used for PZEM software prototyping
+ * without the need for real device.
+ * Not all functions supported (yet), i.e. alarms.
+ * 
+ */
+class DummyPZ004 : public PZ004 {
+
+public:
+    FakeMeterPZ004 fm;
+
+    // Derrived constructor
+    DummyPZ004(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) : PZ004(_id, modbus_addr, _descr) { fm.reset(); pz.data = fm.mt; }
+
+    //virtual d-tor
+    virtual ~DummyPZ004(){};
+
+    // Override methods
+    void resetEnergyCounter() override { pz.data.energy = 0; fm.reset(); };
+
+    void updateMetrics() override;
+
+    /**
+     * @brief a "do nothing" sink
+     * I do not expect any real data to be fed to dummy device
+     */
+    void rx_sink(const RX_msg *msg) override {};
+
+    /* ***  *** */
+    // Own methods
+
+    // reset energy counter to some specific value
+    void resetEnergyCounter(uint32_t e){ pz.data.energy = e; fm.mt.energy = e; };
+};
+#endif // ARDUINO
