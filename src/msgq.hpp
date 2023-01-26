@@ -73,7 +73,7 @@ struct TX_msg {
     bool w4rx;              // 'wait for reply' - a reply for message expected, should block TX queue handler
 
     TX_msg(const size_t size, bool rxreq = true) : len(size), w4rx(rxreq) {
-        data = (uint8_t*)malloc(len);
+        data = new uint8_t[len];
         //memcpy(data, srcdata, len);
     }
     ~TX_msg(){ delete[] data; data = nullptr; }
@@ -99,7 +99,8 @@ struct RX_msg {
 class MsgQ {
 
 public:
-    typedef std::function<void (RX_msg*)> datahandler_t;
+    typedef std::function<void (RX_msg*)> rxdatahandler_t;
+    typedef std::function<void (TX_msg*)> txdatahandler_t;
 
     MsgQ(){};
     // Class dtor
@@ -125,7 +126,7 @@ public:
      * if there is no call-back attached, incoming messages are discarded
      * @param f functional call-back 'std::function<void (RX_msg*)>'
      */
-    virtual void attach_RX_hndlr(datahandler_t f);
+    virtual void attach_RX_hndlr(rxdatahandler_t f);
 
     /**
      * @brief remove call-back function
@@ -153,7 +154,7 @@ public:
      * @return true if success
      * @return false on any error or if Q's/tasks already running
      */
-    virtual bool startQueues(){ return false; };
+    virtual bool startQueues(){ return true; };
 
     /**
      * @brief stop RX/TX queues Task handlers
@@ -162,23 +163,8 @@ public:
     virtual void stopQueues(){};
 
 protected:
-    /**
-     * @brief RX Queue event handler function
-     * NOTE: On RX event, handler creates new RX_msg object with received data
-     * once this object is passed to the call-back function - it is up to the calee
-     * to maintaint life-time of the object. Once utilised it MUST be 'delete'ed to prevent mem leaks
-     */
-    virtual void rxqueuehndlr() = 0;
 
-    /**
-     * @brief TX message Queue handler function
-     * 
-     */
-    virtual void txqueuehndlr() = 0;
-
-    datahandler_t   rx_callback = nullptr;  // RX data callback
-    QueueHandle_t   rx_msg_q=nullptr;           // RX msg queue
-    QueueHandle_t   tx_msg_q=nullptr;       // TX msg queue
+    rxdatahandler_t   rx_callback = nullptr;    // RX data callback
 
 };
 
@@ -276,7 +262,7 @@ public:
      */
     bool txenqueue(TX_msg *msg) override;
 
-    void attach_RX_hndlr(datahandler_t f) override;
+    void attach_RX_hndlr(rxdatahandler_t f) override;
 
     void detach_RX_hndlr() override;
 
@@ -284,6 +270,9 @@ private:
     TaskHandle_t    t_rxq=nullptr;          // RX Q servicing task
     TaskHandle_t    t_txq=nullptr;          // TX Q servicing task
     SemaphoreHandle_t rts_sem;              // 'ready to send next' Semaphore
+
+    QueueHandle_t   rx_msg_q=nullptr;       // RX msg queue
+    QueueHandle_t   tx_msg_q=nullptr;       // TX msg queue
 
     /**
      * @brief start task handling UART RX queue events
@@ -361,4 +350,76 @@ public:
     // Construct a new UART port
     PZPort (uint8_t _id, UART_cfg &cfg, const char *_name=nullptr);
 
+};
+
+
+class NullQ : public MsgQ {
+
+public:
+    NullQ(){};
+
+    // Class dtor
+    virtual ~NullQ();
+
+    // Copy semantics : forbidden
+    NullQ(const NullQ&) = delete;
+    NullQ& operator=(const NullQ&) = delete;
+
+    /**
+     * @brief pick outbound message and immidiately call tx_callback() on it
+     * this method will take ownership on TX_msg object and 'delete' it
+     * after sending to handler. It is an error to access/delete/change this object once passed here
+     * 
+     * @param msg PZEM command message object
+     * @return true - if mesage has been processed successfully
+     * @return false - if tx_callback is not defined
+     */
+    bool txenqueue(TX_msg *msg) override;
+
+    /**
+     * @brief feed RX message that will be immidiately passed to RX_hndlr
+     * 
+     * @param msg 
+     * @return true if rx handler is attached and message sent
+     * @return false otherwise
+     */
+    bool rxenqueue(RX_msg *msg);
+
+    /**
+     * @brief attach consumer for TX'ed messages,
+     * i.e. those ones that are send via txenqueue()
+     * once handler is attached, any message sent via txenqueue() is immidiately fed to the TX_handler
+     * no queueing is done
+     * 
+     * @param f 
+     */
+    void attach_TX_hndlr(txdatahandler_t f);
+
+    /**
+     * @brief detach TX consumer
+     * 
+     */
+    void detach_TX_hndlr();
+
+protected:
+    txdatahandler_t   tx_callback = nullptr;  // TX data consumer
+
+};
+
+
+/**
+ * @brief virtual null cable class
+ * it crossconnects two NullQ ojects and transparantly pass data between peers   
+ * 
+ */
+class NullCable {
+
+private:
+    void tx_rx(TX_msg *tm, bool atob);
+
+public:
+    NullCable();
+
+    NullQ portA;
+    NullQ portB;
 };

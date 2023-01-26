@@ -13,7 +13,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "msgq.hpp"
 
 
-void MsgQ::attach_RX_hndlr(datahandler_t f){
+void MsgQ::attach_RX_hndlr(rxdatahandler_t f){
     if (!f)
         return;
     rx_callback = std::move(f);
@@ -136,7 +136,7 @@ bool UartQ::txenqueue(TX_msg *msg){
     }
 }
 
-void UartQ::attach_RX_hndlr(datahandler_t f){
+void UartQ::attach_RX_hndlr(rxdatahandler_t f){
     if (!f)
         return;
     rx_callback = std::move(f);
@@ -322,4 +322,52 @@ void PZPort::setdescr(const char *_name){
         sprintf(descr.get(), "Port-%d", id);
     } else
         descr = std::unique_ptr<char[]>(strcpy(new char[strlen(_name) + 1], _name));
+}
+
+
+NullQ::~NullQ(){
+    tx_callback = nullptr;
+    rx_callback = nullptr;
+}
+
+// NullQ implementation methods
+void NullQ::attach_TX_hndlr(txdatahandler_t f){
+    if (f) tx_callback = std::move(f);
+}
+
+void NullQ::detach_TX_hndlr(){
+    tx_callback = nullptr;
+}
+
+bool NullQ::txenqueue(TX_msg *msg){
+    bool status = false;
+    if (tx_callback){
+        tx_callback(msg);
+        status = true;
+    }
+
+    delete msg;
+    return status;
+}
+
+bool NullQ::rxenqueue(RX_msg *msg){
+    if (rx_callback){
+        rx_callback(msg);
+        return true;
+    }
+
+    delete msg;
+    return false;
+}
+
+
+NullCable::NullCable(){
+    portA.attach_TX_hndlr(std::bind(&NullCable::tx_rx, this, std::placeholders::_1, true));
+    portB.attach_TX_hndlr(std::bind(&NullCable::tx_rx, this, std::placeholders::_1, false));
+}
+
+void NullCable::tx_rx(TX_msg *tm, bool atob){
+    auto *rmsg = new RX_msg(tm->data, tm->len);
+    atob ? portB.rxenqueue(rmsg) : portA.rxenqueue(rmsg);
+    // receiver call will destroy dynamically allocated object
 }
