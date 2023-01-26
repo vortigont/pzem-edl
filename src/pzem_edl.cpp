@@ -448,7 +448,7 @@ void FakeMeterPZ004::reset(){
     mt.freq = DEF_FREQ;
     mt.pf = DEF_PF;
 
-    mt.power = mt.voltage * mt.current * mt.pf / 100;
+    mt.power = mt.voltage * mt.current * mt.pf / 100000;
     timecount = esp_timer_get_time() >> 10;
     _nrg = 0;
 }
@@ -482,9 +482,9 @@ void FakeMeterPZ004::randomize(pz004::metrics& m){
 
 void FakeMeterPZ004::updnrg(pz004::metrics& m){
     int64_t t = esp_timer_get_time() >> 10;
-    _nrg += mt.power * (t - timecount);      // find energy for the last time interval in W*ms
+    _nrg += mt.power * (t - timecount) / 10;      // find energy for the last time interval in W*ms
     timecount = t;
-    mt.power = m.voltage * m.current * m.pf / 10000;     // 10000 = 100 is for pf, another is for decivolts*ma/dw
+    mt.power = m.voltage * m.current * m.pf / 100000;     // 100000 = 100 is for pf, 1000 is for decivolts*ma (dw)
     mt.energy += _nrg / 3600000;            // increment W*h counter if we have enough energy consumed so far
     _nrg %= 3600000;
 }
