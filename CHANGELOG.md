@@ -1,5 +1,6 @@
 # Change Log
 
+## v 1.1.0 (2023-08-21)
 + add DummyPZEM004 device with emulated metrics 
 + add NullQ and NullCable objects
 * trivial virtual destructors were missing body
