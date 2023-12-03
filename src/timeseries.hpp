@@ -182,6 +182,12 @@ public:
      */
     void clear(){ head = 0; size = 0; };
 
+    /**
+     * @brief return current size of the buffer
+     * i.e. a number of elements stored, could be less or equal to capacity
+     * 
+     * @return int 
+     */
     int getSize() const { return this->size; }
 
     void push_back(T const &val);
@@ -285,7 +291,15 @@ public:
      * @param id 
      * @return TimeSeries<T>* - or nullptr if TS with specified ID does not exit
      */
-    TimeSeries<T>* getTS(uint8_t id) const;
+    const TimeSeries<T>* getTS(uint8_t id) const;
+
+    /**
+     * @brief get a pointer to TS object with specified ID
+     * a cast wraper around const get()
+     * @param id 
+     * @return TimeSeries<T>*  - or nullptr if TS with specified ID does not exit
+     */
+    TimeSeries<T>* getTS(uint8_t id){ return const_cast<TimeSeries<T>*>(const_cast<const TSContainer<T>*>(this)->getTS(id)); };
 
     /**
      * @brief add new TimeSeries object to the stack of series data
@@ -465,7 +479,7 @@ void TimeSeries<T>::setInterval(uint32_t _interval, uint32_t newtime){
 }
 
 template <typename T>
-TimeSeries<T>* TSContainer<T>::getTS(uint8_t id) const {
+const TimeSeries<T>* TSContainer<T>::getTS(uint8_t id) const {
     if (!tschain.size())
         return nullptr;
 
@@ -522,13 +536,13 @@ void TSContainer<T>::push(const T &val, uint32_t time){
 
 template <typename T>
 int TSContainer<T>::getTSsize(uint8_t id) const {
-    auto ts = getTS(id);
+    const auto ts = getTS(id);
     return ts ? ts->getSize() : 0;
 }
 
 template <typename T>
 int TSContainer<T>::getTScap(uint8_t id) const {
-    auto ts = getTS(id);
+    const auto ts = getTS(id);
     return ts ? ts->capacity : 0;
 }
 
