@@ -181,9 +181,19 @@ void mycallback(uint8_t id, const RX_msg* m){
     Serial.printf("\nCallback triggered for PZEM ID: %d\n", id);
 
 /*
-    It is possible to obtain a fresh new data same way as before
+    //It is possible to obtain a fresh new data same way as before
 
-    Serial.printf("PZEM current as float: %.3f (Amps)\n", m->getMetricsPZ004()->asFloat(pzmbus::meter_t::cur));
+    Serial.printf("PZEM data has been updated %lld ms ago\n", pz->getState()->dataAge());
+
+    auto metrics = pz->getMetricsPZ004();
+
+    Serial.printf("Voltage:\t%d dV\t~ %.1f volts\n", metrics->voltage, metrics->asFloat(pzmbus::meter_t::vol));
+    Serial.printf("Current:\t%u mA\t~ %.3f amperes\n", metrics->current, metrics->asFloat(pzmbus::meter_t::cur));
+    Serial.printf("Power:\t\t%u dW\t~ %.1f watts\n", metrics->power, metrics->asFloat(pzmbus::meter_t::pwr));
+    Serial.printf("Energy:\t\t%u Wh\t~ %.3f kWatt*hours\n", metrics->energy, metrics->asFloat(pzmbus::meter_t::enrg)/1000 );
+    Serial.printf("Frequency:\t%d dHz\t~ %.1f Herz\n", metrics->freq, metrics->asFloat(pzmbus::meter_t::frq));
+    Serial.printf("Power factor:\t%d/100\t~ %.2f\n", metrics->pf, metrics->asFloat(pzmbus::meter_t::pf));
+    Serial.printf("Power Alarm:\t%s\n", metrics->alarm ? "Yes":"No");
 */
 
 /*
