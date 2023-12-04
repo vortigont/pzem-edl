@@ -168,15 +168,25 @@ void loop(){
  */
 void mycallback(uint8_t id, const RX_msg* m){
 
-// Here I can get the id of PZEM (might get handy if have more than one attached)
-   Serial.printf("\nTime: %ld / Heap: %d - Callback triggered for PZEM ID: %d, name: %s\n", millis(), ESP.getFreeHeap(), id,  meters->getDescr(id));
+    // Here I can get the id of PZEM (might get handy if have more than one attached)
+    Serial.printf("\nTime: %ld - Callback triggered for PZEM ID: %d, name: %s\n", millis(), id,  meters->getDescr(id));
 
 /*
-    Here it is possible to obtain a fresh new data same way as before,
-    accessing metrics and state data via references
+    //So now we have a notification that pzem device with ID 'id' has been updated, we can print (or send somewhere new data)
 
-    auto *m = (const pz004::metrics*)meters->getMetrics(PZEM_ID_2)
-    Serial.printf("PZEM '%s' current as float: %.3f (Amps)\n", meters->getDescr(PZEM_ID_2), m->asFloat(meter_t::cur));
+    if (meters->getState(id)->dataStale())
+        return;   // something is wrong, message is either bad or not a data packet
+
+    auto s = (const pz004::state*)meters->getState(id);
+    Serial.printf("===\nPower alarm: %s\n", s->alarm ? "present" : "absent");
+
+    Serial.printf("Voltage:\t%d dV\t~ %.1f volts\n", s->data.voltage, s->data.asFloat(pzmbus::meter_t::vol));
+    Serial.printf("Current:\t%u mA\t~ %.3f amperes\n", s->data.current, s->data.asFloat(pzmbus::meter_t::cur));
+    Serial.printf("Power:\t\t%u dW\t~ %.1f watts\n", s->data.power, s->data.asFloat(pzmbus::meter_t::pwr));
+    Serial.printf("Energy:\t\t%u Wh\t~ %.3f kWatt*hours\n", s->data.energy, s->data.asFloat(pzmbus::meter_t::enrg)/1000 );
+    Serial.printf("Frequency:\t%d dHz\t~ %.1f Herz\n", s->data.freq, s->data.asFloat(pzmbus::meter_t::frq));
+    Serial.printf("Power factor:\t%d/100\t~ %.2f\n", s->data.pf, s->data.asFloat(pzmbus::meter_t::pf));
+
 */
 
 /*
