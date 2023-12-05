@@ -23,7 +23,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #endif
 
 #include <cstdlib>
-#include "LList.h"
+#include <list>
 
 // PSRAM support
 #include "esp_idf_version.h"
@@ -36,8 +36,11 @@ GitHub: https://github.com/vortigont/pzem-edl
 #endif
 //#include "psalloc.hpp"
 
+#include "pzem_modbus.hpp"
+
 // forward declarations
 template <typename T> class RingBuff;
+template <class T> class AveragingFunction;
 
 /**
  * @brief Iterator class to traverse RingBuffer data
@@ -179,6 +182,12 @@ public:
      */
     void clear(){ head = 0; size = 0; };
 
+    /**
+     * @brief return current size of the buffer
+     * i.e. a number of elements stored, could be less or equal to capacity
+     * 
+     * @return int 
+     */
     int getSize() const { return this->size; }
 
     void push_back(T const &val);
@@ -201,7 +210,17 @@ public:
 
 };
 
-
+// Unary predicate for ID match
+template <class T>
+class MatchID : public std::unary_function<T,bool>{
+    uint8_t _id;
+public:
+    MatchID(uint8_t id) : _id(id) {}
+    bool operator() ( T val ){
+        // T is a shared_ptr
+        return val->id == _id;
+    }
+};
 
 /**
  * @brief ring buffer container for time series data
@@ -216,9 +235,11 @@ public:
  */
 template <typename T>
 class TimeSeries : public RingBuff<T> {
-    std::unique_ptr<char[]> descr;      // Mnemonic name for the instance
     uint32_t tstamp;                    // last update timestamp mark
     uint32_t interval;                  // time interval between series
+    const char* _descr;                 // Mnemonic name for the instance
+    std::unique_ptr< AveragingFunction<T> > _avg;  // averaging instance
+
 
 public:
     const uint8_t id;                   // TimeSeries unique ID
@@ -226,15 +247,8 @@ public:
     /**
      * Class constructor
      */
-    TimeSeries (uint8_t _id, size_t s, uint32_t start_time, uint32_t _inverval = 1, const char *_descr=nullptr) : RingBuff<T>(s), tstamp(start_time), interval(_inverval), id(_id) {
-        if (!_descr || !*_descr){
-            descr.reset(new char[9]);   // i.e. "Hourly"/"60sec", etc...
-            sprintf(descr.get(), "TS-%d-%d", id, _inverval);
-        }  else
-            descr.reset(strcpy(new char[strlen(_descr) + 1], _descr));
-    }
+    TimeSeries (uint8_t id, size_t s, uint32_t start_time, uint32_t inverval = 1, const char *name=NULL) : RingBuff<T>(s), tstamp(start_time), interval(inverval), _descr(name), id(id) { }
     //virtual ~TimeSeries(){};
-
 
     /**
      * @brief reset buffer to empty state and set last update time mark
@@ -256,13 +270,14 @@ public:
 
     uint32_t getInterval() const { return interval; }
 
-    const char* getDescr() const { return descr.get(); }
+    const char* getDescr() const { return _descr; }
 
     // Setters
     void setInterval(uint32_t _interval, uint32_t newtime);
+
+    void setAverager(std::unique_ptr< AveragingFunction<T> >&& rhs){ _avg = std::move(rhs); };
 };
 
-//
 template <typename T>
 class TSContainer {
 
@@ -270,7 +285,33 @@ public:
     TSContainer<T>(){};
     //~TSContainer();
 
+    /**
+     * @brief get a pointer to TS object with specified ID
+     * 
+     * @param id 
+     * @return TimeSeries<T>* - or nullptr if TS with specified ID does not exit
+     */
     const TimeSeries<T>* getTS(uint8_t id) const;
+
+    /**
+     * @brief get a pointer to TS object with specified ID
+     * a cast wraper around const get()
+     * @param id 
+     * @return TimeSeries<T>*  - or nullptr if TS with specified ID does not exit
+     */
+    TimeSeries<T>* getTS(uint8_t id){ return const_cast<TimeSeries<T>*>(const_cast<const TSContainer<T>*>(this)->getTS(id)); };
+
+    /**
+     * @brief add new TimeSeries object to the stack of series data
+     * 
+     * @param s - number of entries to keep
+     * @param start_time - timestamp of TS creation
+     * @param period - sampling period, all samples that are pushed to TS with lesser interval will be either dropped or averaged if averaging function is provided
+     * @param descr - mnemonic description (pointer MUST be valid for the duraion of life-time, it won't be deep-copied)
+     * @param id - desired ID
+     * @return uint8_t - assigned ID, returns 0 if TS has failed, possibly due to requested ID already exist.
+     *                  If 0 is provided, then next available id will be autoassing
+     */
     uint8_t addTS(size_t s, uint32_t start_time, uint32_t period = 1, const char *descr = nullptr, uint8_t id = 0);
 
     /**
@@ -278,7 +319,7 @@ public:
      * 
      * @param id TimeSeries ID
      */
-    void removeTS(uint8_t id);
+    void removeTS(uint8_t id){ tschain.remove_if( MatchID<TimeSeries<T>>(id) ); }
 
     /**
      * @brief destroy ALL TS's in chain and release memory
@@ -302,6 +343,14 @@ public:
     void push(const T &val, uint32_t time);
 
     bool setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime);
+
+    /**
+     * @brief Set the Averager object to process data between between time intervals 
+     * 
+     * @param id - id of an TS container
+     * @param rhs - rvalue for the unique pointer of the Averager instance, TS containder will own the object
+     */
+    void setAverager(uint8_t id, std::unique_ptr< AveragingFunction<T> >&& rhs);
 
     /**
      * @brief get TS size by id
@@ -338,10 +387,32 @@ public:
     int getTScnt() const { return tschain.size(); };
 
 protected:
-    LList<std::shared_ptr<TimeSeries<T>>> tschain;  // time-series chain
+    std::list< std::shared_ptr<TimeSeries<T>> > tschain;  // time-series chain
 
 };
-//
+
+template <class T>
+class AveragingFunction {
+public:
+    virtual ~AveragingFunction(){};
+
+    virtual void push(const T&) = 0;
+    virtual T get() = 0;
+    virtual void reset() = 0;
+    virtual size_t getCnt() const = 0;
+};
+
+class MeanAveragePZ004 : public AveragingFunction<pz004::metrics> {
+
+    unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
+
+public:
+    void push(const pz004::metrics& m) override;
+    pz004::metrics get() override;
+    void reset() override;
+    size_t getCnt() const override { return _cnt; };
+};
+
 
 //  ===== Implementation follows below =====
 template <typename T>
@@ -360,6 +431,7 @@ template <typename T>
 void TimeSeries<T>::clear(uint32_t t){
     tstamp = t;
     RingBuff<T>::clear();
+    if (_avg) _avg->reset();
 }
 
 template <typename T>
@@ -368,14 +440,17 @@ void TimeSeries<T>::push(const T &val, uint32_t time){
 
     time -= tstamp;                 // разница времени с прошлой выборкой
 
-    if (time < interval)            // промежуточные выборки отбрасываем
-        return;                     // (здесь должна быть возможность аггрегации данных за интервал сторонними функциями)
+    // промежуточные выборки либо усредняем либо отбрасываем
+    if (time < interval ){
+        if (_avg) _avg->push(val);
+        return;
+    }
 
     if (time >= 2*interval){        // пропущено несколько выборок
         if (time/interval > RingBuff<T>::capacity){  // пропустили выборок больше чем весь текущий буфер - сбрасываем всё
             clear(_t);
         } else {
-            T def;                  // заполняем пропуски объектами по умолчанию
+            // заполняем пропуски последним известным значением, это неверные данные, но других всё равно нет
             do {
                 RingBuff<T>::push_back(val);
                 time -= interval;
@@ -383,7 +458,14 @@ void TimeSeries<T>::push(const T &val, uint32_t time){
         }
     }
 
-    RingBuff<T>::push_back(val);
+    // if we have averaging - use it
+    if (_avg && _avg->getCnt()){
+        _avg->push(val);
+        RingBuff<T>::push_back(_avg->get());
+        _avg->reset();
+        _avg->push(val);
+    } else
+        RingBuff<T>::push_back(val);
 
     tstamp = _t;                    // обновляем метку времени
 }
@@ -401,56 +483,41 @@ const TimeSeries<T>* TSContainer<T>::getTS(uint8_t id) const {
     if (!tschain.size())
         return nullptr;
 
-    for (auto _i = tschain.cbegin(); _i != tschain.cend(); ++_i){
+    for (auto _i = tschain.begin(); _i != tschain.end(); ++_i)
         if (_i->get()->id == id)
             return _i->get();
-    }
+
     return nullptr;
 }
 
 template <typename T>
 uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, const char *descr, uint8_t id){
 
-    if (id){                    // check if provided id is already exist
-        auto n = getTS(id);
-        if (n)
-            return 0;
+    if (id && getTS(id)){       // check if provided id is already exist
+        return 0;
     }
 
     if (!id){                   // if provided id is 0 - than find next free one
-        auto n = getTS(id);
+        const TimeSeries<T>* n;
         do {
             n = getTS(++id);
         } while (n && id);
         if (!id) return 0;
     }
 
-    auto node = std::make_shared<TimeSeries<T>>(id, s, start_time, period, descr);
-    if (tschain.add(node))
-        return id;
-
-    return 0;
-}
-
-template <typename T>
-void TSContainer<T>::removeTS(uint8_t id){
-    for (int idx = 0; idx != tschain.size(); ++idx){
-        if (tschain.get(idx)->id == id){
-            tschain.remove(idx);
-            return;
-        }
-    }
+    tschain.emplace_back(std::make_shared<TimeSeries<T>>(id, s, start_time, period, descr));
+    if (period > 1)
+        setAverager(id, std::make_unique<MeanAveragePZ004>());
+    return id;
 }
 
 template <typename T>
 bool TSContainer<T>::setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime){
-    for (auto _i = tschain.begin(); _i != tschain.end(); ++_i){
-        if (_i->get()->id == id){
-            _i->get()->setInterval(_interval, newtime);
-            return true;
-        }
-    }
-    return false;
+    auto ts = getTS(id);
+
+    if (ts) ts->setInterval(_interval, newtime);
+
+    return ts;
 }
 
 
@@ -469,13 +536,13 @@ void TSContainer<T>::push(const T &val, uint32_t time){
 
 template <typename T>
 int TSContainer<T>::getTSsize(uint8_t id) const {
-    auto ts = getTS(id);
+    const auto ts = getTS(id);
     return ts ? ts->getSize() : 0;
 }
 
 template <typename T>
 int TSContainer<T>::getTScap(uint8_t id) const {
-    auto ts = getTS(id);
+    const auto ts = getTS(id);
     return ts ? ts->capacity : 0;
 }
 
@@ -496,4 +563,10 @@ int TSContainer<T>::getTScap() const {
         s += i->get()->capacity;
 
     return s;
+}
+
+template <typename T>
+void TSContainer<T>::setAverager(uint8_t id, std::unique_ptr< AveragingFunction<T> >&& rhs){
+    auto ts = getTS(id);
+    if (ts) ts->setAverager(std::move(rhs));
 }
