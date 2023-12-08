@@ -38,6 +38,7 @@ jobs:
           - "examples/02_SinglePZEM003"
           - "examples/03_MultiplePZEM004"
           - "examples/04_MixedPool"
+          - "examples/05_TimeSeries"
           - "examples/pzem_cli"
 
     steps:
@@ -64,4 +65,5 @@ jobs:
         env: 
           PLATFORMIO_CI_SRC: ${{ matrix.example }}
         run: |
-          pio ci -c ${{ matrix.example }}/platformio.ini
+          cd ${{ matrix.example }} && platformio run -e example -e debug
+          #pio ci -c ${{ matrix.example }}/platformio.ini
