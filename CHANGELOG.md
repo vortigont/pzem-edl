@@ -1,5 +1,11 @@
 # Change Log
 
+## v 1.1.1 (2023-12-09)
+* update examples with more detailed callback code
++ example on how to create and use TimeSeries data collector
+* code style formatting
++ Averaging function for TimeSeries container
+
 ## v 1.1.0 (2023-08-21)
 + add DummyPZEM004 device with emulated metrics 
 + add NullQ and NullCable objects
