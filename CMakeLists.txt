@@ -21,7 +21,7 @@ if(ESP_PLATFORM)
 #return()
 endif()
 
-project(PZEM_EDL VERSION 1.0.1)
+project(PZEM_EDL VERSION 1.1.1)
 
 # https://cmake.org/cmake/help/latest/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html
 #set_target_properties(${COMPONENT_TARGET} PROPERTIES
