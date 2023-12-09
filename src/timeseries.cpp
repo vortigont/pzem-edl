@@ -34,5 +34,5 @@ pz004::metrics MeanAveragePZ004::get(){
 }
 
 void MeanAveragePZ004::reset(){
-    v=c=p=e=f=pf=_cnt = 0;
+    v = c = p = e = f = pf = _cnt = 0;
 }

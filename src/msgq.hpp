@@ -72,7 +72,7 @@ struct TX_msg {
     uint8_t* data;          // data pointer
     bool w4rx;              // 'wait for reply' - a reply for message expected, should block TX queue handler
 
-    TX_msg(const size_t size, bool rxreq = true) : len(size), w4rx(rxreq) {
+    explicit TX_msg(size_t size, bool rxreq = true) : len(size), w4rx(rxreq) {
         data = new uint8_t[len];
         //memcpy(data, srcdata, len);
     }
@@ -179,7 +179,7 @@ struct UART_cfg {
     int gpio_tx;
     uart_config_t uartcfg;              // could be used to change uart properties for other modbus devices
 
-    UART_cfg (uart_port_t _p=PZEM_UART, int _rx=UART_PIN_NO_CHANGE, int _tx=UART_PIN_NO_CHANGE,
+    UART_cfg (uart_port_t _p = PZEM_UART, int _rx = UART_PIN_NO_CHANGE, int _tx = UART_PIN_NO_CHANGE,
                 uart_config_t ucfg =  {     // default values for PZEM004tv30
                 .baud_rate = PZEM_BAUD_RATE,
                 .data_bits = UART_DATA_8_BITS,
@@ -212,9 +212,9 @@ class UartQ : public MsgQ {
     void init(const uart_config_t &uartcfg, int gpio_rx, int gpio_tx);
 
 public:
-    UartQ(const uart_port_t p, const uart_config_t cfg, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){ init(cfg, gpio_rx, gpio_tx); }
+    UartQ(const uart_port_t p, const uart_config_t cfg, int gpio_rx = UART_PIN_NO_CHANGE, int gpio_tx = UART_PIN_NO_CHANGE) : port(p){ init(cfg, gpio_rx, gpio_tx); }
 
-    UartQ(const uart_port_t p, int gpio_rx=UART_PIN_NO_CHANGE, int gpio_tx=UART_PIN_NO_CHANGE) : port(p){
+    UartQ(const uart_port_t p, int gpio_rx = UART_PIN_NO_CHANGE, int gpio_tx = UART_PIN_NO_CHANGE) : port(p){
         uart_config_t uartcfg = {     // default values for PZEM004v30
             .baud_rate = PZEM_BAUD_RATE,
             .data_bits = UART_DATA_8_BITS,
@@ -249,7 +249,7 @@ public:
      * @brief stop RX/TX queues Task handlers
      * 
      */
-    void stopQueues() override ;
+    void stopQueues() override;
 
     /**
      * @brief enqueue PZEM message and transmit once TX line is free to go
@@ -267,12 +267,12 @@ public:
     void detach_RX_hndlr() override;
 
 private:
-    TaskHandle_t    t_rxq=nullptr;          // RX Q servicing task
-    TaskHandle_t    t_txq=nullptr;          // TX Q servicing task
+    TaskHandle_t    t_rxq = nullptr;          // RX Q servicing task
+    TaskHandle_t    t_txq = nullptr;          // TX Q servicing task
     SemaphoreHandle_t rts_sem;              // 'ready to send next' Semaphore
 
-    QueueHandle_t   rx_msg_q=nullptr;       // RX msg queue
-    QueueHandle_t   tx_msg_q=nullptr;       // TX msg queue
+    QueueHandle_t   rx_msg_q = nullptr;       // RX msg queue
+    QueueHandle_t   tx_msg_q = nullptr;       // TX msg queue
 
     /**
      * @brief start task handling UART RX queue events
@@ -284,7 +284,7 @@ private:
 
         //Create a task to handle UART event from ISR
         if (!t_rxq)
-            return xTaskCreate(UartQ::rxTask, EVT_TASK_NAME, EVT_TASK_STACK, (void *)this, EVT_TASK_PRIO, &t_rxq) == pdPASS;
+            return xTaskCreate(UartQ::rxTask, EVT_TASK_NAME, EVT_TASK_STACK, reinterpret_cast<void *>(this), EVT_TASK_PRIO, &t_rxq) == pdPASS;
         else
             return true;
     }
@@ -310,7 +310,7 @@ private:
 
         //Create a task to handle UART event from ISR
         if (!t_txq)
-            return xTaskCreate(UartQ::txTask, TXQ_TASK_NAME, TXQ_TASK_STACK, (void *)this, TXQ_TASK_PRIO, &t_txq) == pdPASS;
+            return xTaskCreate(UartQ::txTask, TXQ_TASK_NAME, TXQ_TASK_STACK, reinterpret_cast<void *>(this), TXQ_TASK_PRIO, &t_txq) == pdPASS;
         else
             return true;
     }
@@ -323,12 +323,12 @@ private:
 
     // static wrapper for Task to call RX handler class member
     static void rxTask(void* pvParams){
-        ((UartQ*)pvParams)->rxqueuehndlr();
+        (reinterpret_cast<UartQ*>(pvParams))->rxqueuehndlr();
     }
 
     // static wrapper for Task to call TX handler class member
     static void txTask(void* pvParams){
-        ((UartQ*)pvParams)->txqueuehndlr();
+        (reinterpret_cast<UartQ*>(pvParams))->txqueuehndlr();
     }
 
     /**
@@ -345,7 +345,7 @@ private:
             xSemaphoreGive(rts_sem);                // сигналим что можно отправлять следующий пакет и мы готовы ловить ответ
 
             // 'xQueueReceive' will "sleep" untill an event messages arrives from the RX event queue
-            if(xQueueReceive(rx_msg_q, (void*)&event, (portTickType)portMAX_DELAY)) {
+            if(xQueueReceive(rx_msg_q, reinterpret_cast<void*>(&event), (portTickType)portMAX_DELAY)) {
 
                 //Handle received event
                 switch(event.type) {
@@ -476,7 +476,7 @@ public:
     std::unique_ptr<MsgQ> q = nullptr;
 
     // Construct from generic MgsQ object
-    PZPort (uint8_t _id, MsgQ *mq, const char *_name=nullptr) : id(_id) {
+    PZPort (uint8_t _id, MsgQ *mq, const char *_name = nullptr) : id(_id) {
         //std::move(mq);
         q.reset(mq);
         setdescr(_name);
@@ -484,7 +484,7 @@ public:
     }
 
     // Construct a new UART port
-    PZPort (uint8_t _id, UART_cfg &cfg, const char *_name=nullptr) : id(_id) {
+    PZPort (uint8_t _id, UART_cfg &cfg, const char *_name = nullptr) : id(_id) {
         UartQ *_q = new UartQ(cfg.p, cfg.uartcfg, cfg.gpio_rx, cfg.gpio_tx);
         q.reset(_q);
         setdescr(_name);

@@ -93,7 +93,7 @@ struct RingIterator {
     // Decrementers
     RingIterator& operator--() { --m_idx; return *this; }
     RingIterator  operator--(int) { RingIterator tmp = *this; --(*this); return tmp; }
-    RingIterator& operator-=(const difference_type& d) { m_idx-=d; return *this; }
+    RingIterator& operator-=(const difference_type& d) { m_idx -= d; return *this; }
     RingIterator  operator- (const difference_type& d) const { return RingIterator(m_ptr, m_idx - d); }
     difference_type operator- (const RingIterator& a) const { return (m_idx - a.m_idx); }
 
@@ -194,28 +194,28 @@ public:
 
     //T* pop_front(){};
 
-	// Const iterator methods
+    // Const iterator methods
     auto cbegin() const { return ConstIterator(this, 0); }
-	auto cend()   const { return ConstIterator(this, size); }
+    auto cend()   const { return ConstIterator(this, size); }
 
     auto crbegin() const { return ConstIterator(this, 1-size); }
     auto crend()   const { return ConstIterator(this, 1); }
 
-	// Mutable iterator methods
-	auto begin() { return Iterator(this, 0); }
-	auto end()   { return Iterator(this, size); }
+    // Mutable iterator methods
+    auto begin() { return Iterator(this, 0); }
+    auto end()   { return Iterator(this, size); }
 
-	auto rbegin() { return Iterator(this, 1-size); }
-	auto rend()   { return Iterator(this, 1); }
+    auto rbegin() { return Iterator(this, 1-size); }
+    auto rend()   { return Iterator(this, 1); }
 
 };
 
 // Unary predicate for ID match
 template <class T>
-class MatchID : public std::unary_function<T,bool>{
+class MatchID : public std::unary_function<T, bool>{
     uint8_t _id;
 public:
-    MatchID(uint8_t id) : _id(id) {}
+    explicit MatchID(uint8_t id) : _id(id) {}
     bool operator() ( T val ){
         // T is a shared_ptr
         return val->id == _id;
@@ -247,7 +247,7 @@ public:
     /**
      * Class constructor
      */
-    TimeSeries (uint8_t id, size_t s, uint32_t start_time, uint32_t inverval = 1, const char *name=NULL) : RingBuff<T>(s), tstamp(start_time), interval(inverval), _descr(name), id(id) { }
+    TimeSeries (uint8_t id, size_t s, uint32_t start_time, uint32_t inverval = 1, const char *name = NULL) : RingBuff<T>(s), tstamp(start_time), interval(inverval), _descr(name), id(id) { }
     //virtual ~TimeSeries(){};
 
     /**
@@ -424,7 +424,7 @@ void RingBuff<T>::push_back(const T &val){
     if (size != capacity)
         ++size;
     else if (++head == capacity)
-        head=0;
+        head = 0;
 }
 
 template <typename T>
@@ -454,7 +454,7 @@ void TimeSeries<T>::push(const T &val, uint32_t time){
             do {
                 RingBuff<T>::push_back(val);
                 time -= interval;
-            } while(time>interval);
+            } while(time > interval);
         }
     }
 

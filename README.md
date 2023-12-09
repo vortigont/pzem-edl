@@ -16,32 +16,27 @@ Feel free to open a discussion topic on any questions.
  * no loop() hooks, loop blocking, etc... actually no loop-dependend code at all
  * background auto-polling driven by RTOS timers
  * event/callback API for user-code hooks
- * Class objects for managing single device/port instances
- * PZPool to handle multiple PZEM devices of different types groupped on single/multiple Serial port(s)
+ * Class objects for managing single device/port instances (see [example](/examples/01_SinglePZEM004/))
+ * PZPool to handle multiple PZEM devices of different types groupped on single/multiple Serial port(s) (see [example](/examples/03_MultiplePZEM004/))
  * [pzem_cli](/examples/pzem_cli) - a small sketch to interact with pzem via terminal cli
- * Collector module
+ * Collector module  (see [example](/examples/05_TimeSeries/))
     * collecting TimeSeries of metrics data
+    * Averaging for TimeSeries
     * iterated circular buffers
     * PSRAM support
- * DummyPZEM004 - a dummy object that provides some random metrics like a real PZEM004 device
+ * [DummyPZEM004](#DummyPZEM004) - a dummy object that provides some random metrics like a real PZEM004 device
 
 
 ### Supported modules
  - PZEM-004Tv3.0 (same as PZEM-014/PZEM-016) AC 10/100 Amps meter
  - PZEM-003 (same as PZEM-017) DC 10/50/100/200/300 Amps meter (not tested)
 
+### Reference project
+I use this lib for my own poject - [ESPEM](https://github.com/vortigont/espem). It has WebUI to display PZEM data, live charts to plot collected TimeSeries data, JSON export, MQTT publishing.
 
 ### Limitations
  * ESP32 platform only (Arduino/ESP-IDF compatible)
  * Hardware Serial only (not a problem for esp32, it has 3 of it with pin remapping)
-
-### TODO list
- * Averaging for TimeSeries
- * Export module
-    * JSON
-    * binary
-    * csv
-
 
 ### How it works
 A classic design for Arduino code work like this:

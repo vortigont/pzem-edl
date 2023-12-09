@@ -36,4 +36,4 @@ bool checkcrc16(const uint8_t *buf, uint16_t len);
  */
 void setcrc16(uint8_t *data, uint16_t len);
 
-}   // end of 'namespace modbus'
+}   // namespace modbus

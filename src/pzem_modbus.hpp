@@ -149,8 +149,8 @@ struct state {
     const pzmodel_t model;      // state struct relates to specific pzem mddel
     uint8_t addr = ADDR_ANY;
     pzmbus::pzem_err_t err;
-    int64_t poll_us=0;     // last poll request sent time, microseconds since boot
-    int64_t update_us=0;   // last succes update time, us since boot
+    int64_t poll_us = 0;     // last poll request sent time, microseconds since boot
+    int64_t update_us = 0;   // last succes update time, us since boot
     metrics data;          // default metrics struct, does nothing actually
 
     // C-tor
@@ -169,7 +169,7 @@ struct state {
      * should be called on each request set to PZEM
      * 
      */
-    void reset_poll_us(){ poll_us=esp_timer_get_time(); }
+    void reset_poll_us(){ poll_us = esp_timer_get_time(); }
 
     /**
      * @brief data considered stale if last update time is more than 2*PZEM_REFRESH_PERIOD ms
@@ -187,7 +187,7 @@ struct state {
      * @return true on success
      * @return false on error
      */
-    virtual bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true){return false;};
+    virtual bool parse_rx_mgs(const RX_msg *m, bool skiponbad = true){return false;};
 };
 
 
@@ -221,7 +221,7 @@ TX_msg* cmd_set_modbus_addr(uint8_t addr, const uint8_t current_addr = ADDR_ANY)
  */
 TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
 
-}   // end of 'namespace pzmbus'
+}   // namespace pzmbus
 
 /**
  * @brief implementation for model PZEM004tv30
@@ -236,19 +236,19 @@ namespace pz004 {
  * this struct is nicely 32-bit aligned :)
  */
 struct metrics : pzmbus::metrics {
-    uint16_t voltage=0;
-    uint32_t current=0;
-    uint32_t power=0;
-    uint32_t energy=0;
-    uint16_t freq=0;
-    uint16_t pf=0;
-    uint16_t alarm=0;
+    uint16_t voltage = 0;
+    uint32_t current = 0;
+    uint32_t power = 0;
+    uint32_t energy = 0;
+    uint16_t freq = 0;
+    uint16_t pf = 0;
+    uint16_t alarm = 0;
 
     virtual ~metrics(){};
 
     float asFloat(pzmbus::meter_t m) const override;
     
-    virtual bool parse_rx_msg(const RX_msg *m) override;
+    bool parse_rx_msg(const RX_msg *m) override;
 };
 
 /**
@@ -257,8 +257,8 @@ struct metrics : pzmbus::metrics {
  */
 struct state : pzmbus::state {
     metrics data;
-    uint16_t alrm_thrsh=0;
-    bool alarm=false;
+    uint16_t alrm_thrsh = 0;
+    bool alarm = false;
 
     // C-tor - specify pzem model to base struct
     state () : pzmbus::state(pzmbus::pzmodel_t::pzem004v3) {}
@@ -272,7 +272,7 @@ struct state : pzmbus::state {
      * @return true on success
      * @return false on error
      */
-    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override;
+    bool parse_rx_mgs(const RX_msg *m, bool skiponbad = true) override;
 
 };
 
@@ -344,7 +344,8 @@ void tx_msg_debug(const TX_msg *m);
  * @param m PZEM RX packet structure
  */
 void rx_msg_prettyp(const RX_msg *m);
-}
+
+}   // namespace pz004
 
 
 
@@ -366,12 +367,12 @@ enum class shunt_t:uint8_t {
  * this struct is nicely 32-bit aligned :)
  */
 struct metrics : pzmbus::metrics {
-    uint16_t voltage=0;
-    uint16_t current=0;
-    uint32_t power=0;
-    uint32_t energy=0;
-    uint16_t alarmh=0;
-    uint16_t alarml=0;
+    uint16_t voltage = 0;
+    uint16_t current = 0;
+    uint32_t power = 0;
+    uint32_t energy = 0;
+    uint16_t alarmh = 0;
+    uint16_t alarml = 0;
 
     float asFloat(pzmbus::meter_t m) const override;
 
@@ -384,10 +385,10 @@ struct metrics : pzmbus::metrics {
  */
 struct state : pzmbus::state {
     metrics data;
-    uint16_t alrmh_thrsh=0;
-    uint16_t alrml_thrsh=0;
-    bool alarmh=false;
-    bool alarml=false;
+    uint16_t alrmh_thrsh = 0;
+    uint16_t alrml_thrsh = 0;
+    bool alarmh = false;
+    bool alarml = false;
     uint8_t irange = 0;     // 100A shunt
 
     // C-tor - specify pzem model to base struct
@@ -401,7 +402,7 @@ struct state : pzmbus::state {
      * @return true on success
      * @return false on error
      */
-    bool parse_rx_mgs(const RX_msg *m, bool skiponbad=true) override;
+    bool parse_rx_mgs(const RX_msg *m, bool skiponbad = true) override;
 
 };
 
@@ -469,4 +470,5 @@ TX_msg* cmd_energy_reset(const uint8_t addr = ADDR_ANY);
  * @param m PZEM RX packet structure
  */
 void rx_msg_prettyp(const RX_msg *m);
-}
+
+}   // namespace pz003

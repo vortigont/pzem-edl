@@ -18,8 +18,6 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "esp_log.h"
 #endif
 
-using namespace pz004;
-
 #define POLLER_NAME         "PZ_poll"
 #define POOL_POLLER_NAME    "PZP_Poll"
 #define TIMER_CMD_TIMEOUT    10     // block up to x ticks trying to change timer params
@@ -91,21 +89,21 @@ bool PZEM::autopoll(bool newstate){
 
     if (newstate){
         if (!t_poller){ // create new timer if absent
-            t_poller = xTimerCreate(POLLER_NAME, pdMS_TO_TICKS(poll_period), pdTRUE, (void *)this, PZEM::timerRunner);
+            t_poller = xTimerCreate(POLLER_NAME, pdMS_TO_TICKS(poll_period), pdTRUE, reinterpret_cast<void *>(this), PZEM::timerRunner);
             if (!t_poller)
                 return false;
         }
 
         // try to (re)start timer if not active
         if( xTimerIsTimerActive( t_poller ) == pdFALSE )
-            return xTimerStart(t_poller, TIMER_CMD_TIMEOUT)==pdPASS;
+            return xTimerStart(t_poller, TIMER_CMD_TIMEOUT) == pdPASS;
 
         return true;    // seems it's already up and running, quit
     }
 
     // disable timer otherwise
     if (t_poller)
-        return xTimerDelete(t_poller, TIMER_CMD_TIMEOUT)==pdPASS;
+        return xTimerDelete(t_poller, TIMER_CMD_TIMEOUT) == pdPASS;
 
     return false;   // last resort state
 }
@@ -372,14 +370,14 @@ bool PZPool::autopoll(bool newstate){
 
         // try to (re)start timer if not active
         if( xTimerIsTimerActive( t_poller ) == pdFALSE )
-            return xTimerStart(t_poller, TIMER_CMD_TIMEOUT)==pdPASS;
+            return xTimerStart(t_poller, TIMER_CMD_TIMEOUT) == pdPASS;
 
         return true;    // seems it's already up and running, quit
     }
 
     // disable timer otherwise
     if (t_poller)
-        return xTimerDelete(t_poller, TIMER_CMD_TIMEOUT)==pdPASS;
+        return xTimerDelete(t_poller, TIMER_CMD_TIMEOUT) == pdPASS;
 
     return false;   // last resort state
 }
@@ -392,7 +390,7 @@ size_t PZPool::getPollrate() const {
 }
 
 bool PZPool::setPollrate(size_t t){
-    if (t<POLLER_MIN_PERIOD)
+    if (t < POLLER_MIN_PERIOD)
         return false;
 
     return ( xTimerChangePeriod( t_poller, t / portTICK_PERIOD_MS, TIMER_CMD_TIMEOUT ) == pdPASS );
