@@ -42,7 +42,7 @@ public:
     /**
      * Class constructor
      */
-    PZEM(const uint8_t _id, const char *_descr=nullptr) : id(_id) {
+    explicit PZEM(uint8_t _id, const char *_descr = nullptr) : id(_id) {
         if (!_descr || !*_descr){
             descr.reset(new char[9]);   // i.e. PZEM-123
             sprintf(descr.get(), "PZEM-%d", id);
@@ -172,13 +172,13 @@ public:
     virtual void resetEnergyCounter() = 0;
 
 private:
-    TimerHandle_t t_poller=nullptr;
+    TimerHandle_t t_poller = nullptr;
     size_t poll_period = POLLER_PERIOD;           // auto poll period in ms
 
     static void timerRunner(TimerHandle_t xTimer){
         if (!xTimer) return;
 
-        PZEM* p = (PZEM*) pvTimerGetTimerID(xTimer);
+        PZEM* p = reinterpret_cast<PZEM*>(pvTimerGetTimerID(xTimer));
         if (p) p->updateMetrics();
     }
 
@@ -197,7 +197,7 @@ protected:
 
 public:
     // Derrived constructor
-    PZ004(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) :
+    explicit PZ004(uint8_t _id,  uint8_t modbus_addr = ADDR_ANY, const char *_descr = nullptr) :
         PZEM(_id, _descr) {
         pz.addr = modbus_addr;
     }
@@ -217,7 +217,7 @@ public:
      * @brief poll PZEM for metrics
      * on call a mesage with metrics request is send to PZEM device
      */
-    virtual void updateMetrics() override;
+    void updateMetrics() override;
 
     /**
      * @brief Get the PZEM State object reference
@@ -242,13 +242,13 @@ public:
      * 
      * @param msg 
      */
-    virtual void rx_sink(const RX_msg *msg) override;
+    void rx_sink(const RX_msg *msg) override;
 
     /**
      * @brief send a command to PZEM device to reset it's internal energy counter
      * 
      */
-    virtual void resetEnergyCounter() override;
+    void resetEnergyCounter() override;
 
 };
 
@@ -262,7 +262,7 @@ class PZ003 : public PZEM {
 
 public:
     // Derrived constructor
-    PZ003(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) :
+    PZ003(const uint8_t _id,  uint8_t modbus_addr = ADDR_ANY, const char *_descr = nullptr) :
         PZEM(_id, _descr) {
         pz.addr = modbus_addr;
     }
@@ -363,7 +363,7 @@ public:
      * @return true - on success
      * @return false - on any error
      */
-    bool addPort(uint8_t _id, UART_cfg &portcfg, const char *descr=nullptr);
+    bool addPort(uint8_t _id, UART_cfg &portcfg, const char *descr = nullptr);
 
     /**
      * @brief attach an existing UART port object to the Pool
@@ -386,7 +386,7 @@ public:
      * @return true   - on success
      * @return false  - on any error
      */
-    bool addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, pzmbus::pzmodel_t model, const char *descr=nullptr);
+    bool addPZEM(const uint8_t port_id, const uint8_t pzem_id, uint8_t modbus_addr, pzmbus::pzmodel_t model, const char *descr = nullptr);
     bool addPZEM(const uint8_t port_id, PZEM *pz);
 
     /**
@@ -396,7 +396,7 @@ public:
      * @return true if Port with this ID exist
      * @return false otherwise
      */
-    bool existPort(uint8_t id){return (bool)port_by_id(id);}
+    bool existPort(uint8_t id){return port_by_id(id) == nullptr;}
 
     /**
      * @brief check if the PZEM with spefied id exist in a pool
@@ -405,7 +405,7 @@ public:
      * @return true 
      * @return false 
      */
-    bool existPZEM(uint8_t id){return (bool)pzem_by_id(id);}
+    bool existPZEM(uint8_t id){return pzem_by_id(id)== nullptr;}
 
     /**
      * @brief delete PZEM object from the pool
@@ -507,14 +507,14 @@ public:
 
 
 private:
-    TimerHandle_t t_poller=nullptr;
+    TimerHandle_t t_poller = nullptr;
     size_t poll_period = POLLER_PERIOD;           // auto poll period in ms
     rx_callback_t rx_callback = nullptr;          // external callback to trigger on RX dat
 
     static void timerRunner(TimerHandle_t xTimer){
         if (!xTimer) return;
 
-        PZPool* p = (PZPool*) pvTimerGetTimerID(xTimer);
+        PZPool* p = reinterpret_cast<PZPool*>(pvTimerGetTimerID(xTimer));
         if (p) p->updateMetrics();
     }
 
@@ -593,7 +593,7 @@ public:
     FakeMeterPZ004 fm;
 
     // Derrived constructor
-    DummyPZ004(const uint8_t _id,  uint8_t modbus_addr=ADDR_ANY, const char *_descr=nullptr) : PZ004(_id, modbus_addr, _descr) { fm.reset(); pz.data = fm.mt; }
+    DummyPZ004(const uint8_t _id,  uint8_t modbus_addr = ADDR_ANY, const char *_descr = nullptr) : PZ004(_id, modbus_addr, _descr) { fm.reset(); pz.data = fm.mt; }
 
     //virtual d-tor
     virtual ~DummyPZ004(){};

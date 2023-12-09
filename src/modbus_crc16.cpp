@@ -60,10 +60,10 @@ void setcrc16(uint8_t *data, uint16_t len){
 }
 
 bool checkcrc16(const uint8_t *data, uint16_t len){
-    if (len<3)
+    if (len < 3)
         return false;
 
     return *(uint16_t*)&data[len-2] == crc16(data, len - 2);
 }
 
-}
+}   // namespace modbus

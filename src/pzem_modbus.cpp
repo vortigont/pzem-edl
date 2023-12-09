@@ -226,13 +226,14 @@ bool state::parse_rx_mgs(const RX_msg *m, bool skiponbad) {
     return true;
 }
 
-}  // end of 'namespace pz004'
+}  // namespace pz004
 
 
 // implementation for PZEM003 device
 namespace pz003 {
 
-using namespace pzmbus;
+using pzmbus::pzemcmd_t;
+using pzmbus::meter_t;
 
 TX_msg* cmd_get_metrics(uint8_t addr){
     return pzmbus::create_msg(static_cast<uint8_t>(pzemcmd_t::RIR), PZ003_RIR_DATA_BEGIN, PZ003_RIR_DATA_LEN, addr);
@@ -405,7 +406,7 @@ bool state::parse_rx_mgs(const RX_msg *m, bool skiponbad) {
             break;
         }
         case pzmbus::pzemcmd_t::reset_energy :
-            data.energy=0;                      // nothing to do, except reset conter
+            data.energy = 0;                      // nothing to do, except reset conter
             break;
         case pzmbus::pzemcmd_t::read_err :
         case pzmbus::pzemcmd_t::write_err :
@@ -424,5 +425,5 @@ bool state::parse_rx_mgs(const RX_msg *m, bool skiponbad) {
     return true;
 }
 
-}  // end of 'namespace pz003'
+}  // namespace pz003
 
