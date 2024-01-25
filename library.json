@@ -36,9 +36,10 @@
             "src/*",
             "CHANGELOG.md",
             "README.md",
+            "CMakeLists.txt",
             "library.json",
             "library.properties",
-            "LICENCE"
+            "LICENSE"
         ]
     },
     "examples": [
@@ -83,12 +84,11 @@
             ]
         },
         {
-            "name": "Mixed PZEM Pool",
+            "name": "TimeSeries",
             "base": "examples/05_TimeSeries",
             "files": [
                 "platformio.ini",
-                "src/main.cpp",
-                "src/src.ino"
+                "src/main.cpp"
             ]
         },
         {
