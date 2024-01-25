@@ -5,7 +5,7 @@
     "version": "1.1.1",
     "keywords": "peacefair, pzem, powermeter, pzem004t, pzem003, pzem-017, pzem-017",
     "description": "PZEM event-driven library - an ESP32 Arduino/esp-idf library implementing communication interface for PeaceFair PZEM-004Tv3.0/PZEM-003 Energy monitor modules via Modbus-RTU proto",
-    "url": "https://github.com/vortigont/espem-edl",
+    "url": "https://github.com/vortigont/pzem-edl",
     "authors": [
         {
             "name": "Emil Muratov",
@@ -17,7 +17,7 @@
     "license": "GPL-3.0-or-later",
     "repository": {
         "type": "git",
-        "url": "https://github.com/vortigont/espem-edl.git"
+        "url": "https://github.com/vortigont/pzem-edl.git"
     },
     "dependencies":
     [
