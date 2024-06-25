@@ -499,7 +499,7 @@ const TimeSeries<T>* TSContainer<T>::getTS(uint8_t id) const {
 
     return nullptr;
 }
-
+namespace pz004 {
 template <typename T>
 uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, const char *descr, uint8_t id){
 
@@ -520,7 +520,31 @@ uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, co
         setAverager(id, std::make_unique<MeanAveragePZ004>());
     return id;
 }
+}
+//  2549 add start
+namespace pz003 {
+template <typename T>
+uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, const char *descr, uint8_t id){
 
+    if (id && getTS(id)){       // check if provided id is already exist
+        return 0;
+    }
+
+    if (!id){                   // if provided id is 0 - than find next free one
+        const TimeSeries<T>* n;
+        do {
+            n = getTS(++id);
+        } while (n && id);
+        if (!id) return 0;
+    }
+
+    tschain.emplace_back(std::make_shared<TimeSeries<T>>(id, s, start_time, period, descr));
+    if (period > 1)
+        setAverager(id, std::make_unique<MeanAveragePZ003>());
+    return id;
+}
+}
+// 2540 add end
 template <typename T>
 bool TSContainer<T>::setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime){
     auto ts = getTS(id);
