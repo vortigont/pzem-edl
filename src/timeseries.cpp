@@ -36,3 +36,27 @@ pz004::metrics MeanAveragePZ004::get(){
 void MeanAveragePZ004::reset(){
     v = c = p = e = f = pf = _cnt = 0;
 }
+
+
+
+void MeanAveragePZ003::push(const pz003::metrics& m){
+    v += m.voltage;
+    c += m.current;
+    p += m.power;
+    e = m.energy;
+    ++_cnt;
+}
+
+pz003::metrics MeanAveragePZ003::get(){
+    pz003::metrics _m;
+    _m.voltage = v / _cnt;
+    _m.current = c / _cnt;
+    _m.power = p / _cnt;
+    _m.energy = e;
+    return _m;
+}
+
+void MeanAveragePZ003::reset(){
+    v = c = p = e  = _cnt = 0;
+}
+
