@@ -527,10 +527,10 @@ void FakeMeterPZ003::randomize(pz003::metrics& m){
     }
 
     // freq
-    if (random(prob.freq) == prob.freq-1){
-        int deviation = mt.freq * deviate.freq / 100;
-        m.freq = mt.freq + random(-1 * deviation, deviation);
-    }
+    //if (random(prob.freq) == prob.freq-1){
+    //    int deviation = mt.freq * deviate.freq / 100;
+    //    m.freq = mt.freq + random(-1 * deviation, deviation);
+    //}
 
     // pf
     //if (random(prob.pf) == prob.pf-1){
