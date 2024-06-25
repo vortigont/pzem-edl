@@ -413,6 +413,16 @@ public:
     size_t getCnt() const override { return _cnt; };
 };
 
+class MeanAveragePZ003 : public AveragingFunction<pz003::metrics> {
+
+    unsigned v{0}, c{0}, p{0}, e{0}, _cnt{0};
+
+public:
+    void push(const pz003::metrics& m) override;
+    pz003::metrics get() override;
+    void reset() override;
+    size_t getCnt() const override { return _cnt; };
+};
 
 //  ===== Implementation follows below =====
 template <typename T>
