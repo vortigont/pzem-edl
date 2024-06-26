@@ -45,7 +45,7 @@ class RingBuff;
 template <class T>
 class AveragingFunction;
 
-
+#include "TS_RingIteratorBuff.hpp"
 
 
 
