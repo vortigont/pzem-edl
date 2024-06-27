@@ -61,7 +61,10 @@ void MeanAverage::push(const T& m){
     c += m.current;
     p += m.power;
     e = m.energy;
-    if (m->getState(id)->model == pzmodel_t::pzem004v3){
+
+   // if (std::is_same<T, int>::value) {
+   if (std::is_same<T, pz004::metrics>::value) {
+   // pz004::metrics
        f += m.freq;
        pf += m.pf;
     )
@@ -74,7 +77,7 @@ T MeanAverage::get(){
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-    if (_m.getState(id)->model == pzmodel_t::pzem004v3){
+    if (std::is_same<T, pz004::metrics>::value) {
         _m.freq = f / _cnt;
         _m.pf = pf / _cnt;
     }
@@ -82,7 +85,11 @@ T MeanAverage::get(){
 }
 
 void MeanAverage::reset(){
-    v = c = p = e = f = pf = _cnt = 0;
+    if (std::is_same<T, pz004::metrics>::value) {
+       v = c = p = e = f = pf = _cnt = 0;
+    } else {
+       v = c = p = e = _cnt = 0;    
+    }
 }
 
 
