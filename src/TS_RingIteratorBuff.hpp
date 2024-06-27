@@ -34,7 +34,6 @@ template <class T>
 class AveragingFunction;
 
 
-
 /**
  * @brief Iterator class to traverse RingBuffer data
  * Requires c++14 to build
@@ -202,6 +201,21 @@ public:
     auto rend()   { return Iterator(this, 1); }
 
 };
+
+
+template <typename T>
+void RingBuff<T>::push_back(const T& val) {
+	if (!data)
+		return;
+
+	data[tail()] = val;
+	if (size != capacity)
+		++size;
+	else if (++head == capacity)
+		head = 0;
+}
+
+
 
 // Unary predicate for ID match
 template <class T>

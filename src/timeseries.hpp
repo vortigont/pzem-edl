@@ -46,7 +46,7 @@ template <class T>
 class AveragingFunction;
 
 #include "TS_RingIteratorBuff.hpp"
-
+#include "TS_Average.hpp"
 
 
 /**
@@ -233,175 +233,56 @@ class TSContainer {
 	std::list<std::shared_ptr<TimeSeries<T>>> tschain;	// time-series chain
 };
 
-////////////////////////////////
-template <>
-class TSContainer<pz003::metrics> {
-   public:
-	TSContainer<pz003::metrics>(){};
-	//~TSContainer();
+//////////////////////////////// add 2540 start
+// template <>
+// class TSContainer<pz003::metrics> {
+//    public:
+// 	TSContainer<pz003::metrics>(){};
+// 	//~TSContainer();
 
-	/**
-	 * @brief get a pointer to TS object with specified ID
-	 *
-	 * @param id
-	 * @return TimeSeries<T>* - or nullptr if TS with specified ID does not exit
-	 */
-	const TimeSeries<pz003::metrics>* getTS(uint8_t id) const;
+// 	const TimeSeries<pz003::metrics>* getTS(uint8_t id) const;
 
-	/**
-	 * @brief get a pointer to TS object with specified ID
-	 * a cast wraper around const get()
-	 * @param id
-	 * @return TimeSeries<T>*  - or nullptr if TS with specified ID does not exit
-	 */
-	TimeSeries<pz003::metrics>*		 getTS(uint8_t id) {
-		  return const_cast<TimeSeries<pz003::metrics>*>(const_cast<const TSContainer<pz003::metrics>*>(this)->getTS(id));
-	};
+// 	TimeSeries<pz003::metrics>*		 getTS(uint8_t id) {
+// 		  return const_cast<TimeSeries<pz003::metrics>*>(const_cast<const TSContainer<pz003::metrics>*>(this)->getTS(id));
+// 	};
 
-	/**
-	 * @brief add new TimeSeries object to the stack of series data
-	 *
-	 * @param s - number of entries to keep
-	 * @param start_time - timestamp of TS creation
-	 * @param period - sampling period, all samples that are pushed to TS with lesser interval will be either dropped or averaged if averaging function is provided
-	 * @param descr - mnemonic description (pointer MUST be valid for the duraion of life-time, it won't be deep-copied)
-	 * @param id - desired ID
-	 * @return uint8_t - assigned ID, returns 0 if TS has failed, possibly due to requested ID already exist.
-	 *                  If 0 is provided, then next available id will be autoassing
-	 */
-	uint8_t addTS(size_t s, uint32_t start_time, uint32_t period = 1, const char* descr = nullptr, uint8_t id = 0);
+// 	uint8_t addTS(size_t s, uint32_t start_time, uint32_t period = 1, const char* descr = nullptr, uint8_t id = 0);
 
-	/**
-	 * @brief remove specific TS object
-	 *
-	 * @param id TimeSeries ID
-	 */
-	void	removeTS(uint8_t id) {
-		   tschain.remove_if(MatchID<TimeSeries<pz003::metrics>>(id));
-	}
+// 	void	removeTS(uint8_t id) {
+// 		   tschain.remove_if(MatchID<TimeSeries<pz003::metrics>>(id));
+// 	}
 
-	/**
-	 * @brief destroy ALL TS's in chain and release memory
-	 *
-	 */
-	void purge() {
-		tschain.clear();
-	};
+// 	void purge() {
+// 		tschain.clear();
+// 	};
 
-	/**
-	 * @brief clear data for the entire container
-	 * all TS's are cleared without releasing memory, reseting it's size to 0
-	 *
-	 */
-	void clear();
+// 	void clear();
 
-	/**
-	 * @brief push new value to the TimeSeries chain
-	 *
-	 * @param val - value
-	 * @param time - current timestamp
-	 */
-	void push(const pz003::metrics& val, uint32_t time);
+// 	void push(const pz003::metrics& val, uint32_t time);
 
-	bool setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime);
+// 	bool setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime);
 
-	/**
-	 * @brief Set the Averager object to process data between between time intervals
-	 *
-	 * @param id - id of an TS container
-	 * @param rhs - rvalue for the unique pointer of the Averager instance, TS containder will own the object
-	 */
-	void setAverager(uint8_t id, std::unique_ptr<AveragingFunction<pz003::metrics>>&& rhs);
+// 	void setAverager(uint8_t id, std::unique_ptr<AveragingFunction<pz003::metrics>>&& rhs);
 
-	/**
-	 * @brief get TS size by id
-	 * return current number of elements in TimeSeries object.
-	 * it could be less than maximum capacity size depending on amount of samples being stored
-	 * @param id - TS object id
-	 * @return int number of elements
-	 */
-	int	 getTSsize(uint8_t id) const;
+// 	int	 getTSsize(uint8_t id) const;
 
-	/**
-	 * @brief get total TS containner size
-	 * return current number of elements in all TimeSeries objects.
-	 * it could be less than maximum capacity size depending on amount of samples being stored
-	 * @return int number of elements
-	 */
-	int	 getTSsize() const;
+// 	int	 getTSsize() const;
 
-	/**
-	 * @brief get TS capacity by id
-	 * return max number of elements in TimeSeries object
-	 * @param id - TS object id
-	 * @return int number of elements
-	 */
-	int	 getTScap(uint8_t id) const;
+// 	int	 getTScap(uint8_t id) const;
 
-	/**
-	 * @brief get total TS container capacity
-	 * return total max number of elements in TSContainer object
-	 * @return int number of elements
-	 */
-	int	 getTScap() const;
+// 	int	 getTScap() const;
 
-	int	 getTScnt() const {
-		 return tschain.size();
-	};
+// 	int	 getTScnt() const {
+// 		 return tschain.size();
+// 	};
 
-   protected:
-	std::list<std::shared_ptr<TimeSeries<pz003::metrics>>> tschain;	// time-series chain
-};
+//    protected:
+// 	std::list<std::shared_ptr<TimeSeries<pz003::metrics>>> tschain;	// time-series chain
+// };
 
-//////////////////////////////
-
-template <class T>
-class AveragingFunction {
-   public:
-	virtual ~AveragingFunction(){};
-
-	virtual void   push(const T&) = 0;
-	virtual T	   get()		  = 0;
-	virtual void   reset()		  = 0;
-	virtual size_t getCnt() const = 0;
-};
-
-class MeanAveragePZ004 : public AveragingFunction<pz004::metrics> {
-	unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
-
-   public:
-	void		   push(const pz004::metrics& m) override;
-	pz004::metrics get() override;
-	void		   reset() override;
-	size_t		   getCnt() const override {
-		return _cnt;
-	};
-};
-
-class MeanAveragePZ003 : public AveragingFunction<pz003::metrics> {
-	unsigned v{0}, c{0}, p{0}, e{0}, _cnt{0};
-
-   public:
-	void		   push(const pz003::metrics& m) override;
-	pz003::metrics get() override;
-	void		   reset() override;
-	size_t		   getCnt() const override {
-		return _cnt;
-	};
-};
+////////////////////////////// add 2540 end
 
 //  ===== Implementation follows below =====
-template <typename T>
-void RingBuff<T>::push_back(const T& val) {
-	if (!data)
-		return;
-
-	data[tail()] = val;
-	if (size != capacity)
-		++size;
-	else if (++head == capacity)
-		head = 0;
-}
 
 template <typename T>
 void TimeSeries<T>::clear(uint32_t t) {
