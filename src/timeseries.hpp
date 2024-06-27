@@ -70,9 +70,6 @@ class TimeSeries : public RingBuff<T> {
    public:
 	const uint8_t id;  // TimeSeries unique ID
 
-	/**
-	 * Class constructor
-	 */
 	TimeSeries(uint8_t id, size_t s, uint32_t start_time, uint32_t inverval = 1, const char* name = NULL)
 		: RingBuff<T>(s), tstamp(start_time), interval(inverval), _descr(name), id(id) {
 	}
@@ -113,6 +110,66 @@ class TimeSeries : public RingBuff<T> {
 		_avg = std::move(rhs);
 	};
 };
+
+
+
+// 
+//  ===== Implementation follows below =====
+
+template <typename T>
+void TimeSeries<T>::clear(uint32_t t) {
+	tstamp = t;
+	RingBuff<T>::clear();
+	if (_avg) _avg->reset();
+}
+
+template <typename T>
+void TimeSeries<T>::push(const T& val, uint32_t time) {
+	uint32_t _t = time;
+
+	time -= tstamp;	 // разница времени с прошлой выборкой
+
+	// промежуточные выборки либо усредняем либо отбрасываем
+	if (time < interval) {
+		if (_avg) _avg->push(val);
+		return;
+	}
+
+	if (time >= 2 * interval) {							// пропущено несколько выборок
+		if (time / interval > RingBuff<T>::capacity) {	// пропустили выборок больше чем весь текущий буфер - сбрасываем всё
+			clear(_t);
+		} else {
+			// заполняем пропуски последним известным значением, это неверные данные, но других всё равно нет
+			do {
+				RingBuff<T>::push_back(val);
+				time -= interval;
+			} while (time > interval);
+		}
+	}
+
+	// if we have averaging - use it
+	if (_avg && _avg->getCnt()) {
+		_avg->push(val);
+		RingBuff<T>::push_back(_avg->get());
+		_avg->reset();
+		_avg->push(val);
+	} else
+		RingBuff<T>::push_back(val);
+
+	tstamp = _t;  // обновляем метку времени
+}
+
+template <typename T>
+void TimeSeries<T>::setInterval(uint32_t _interval, uint32_t newtime) {
+	if (interval > 0) {
+		interval = _interval;
+		clear(newtime);
+	}
+}
+
+
+
+
 
 template <typename T>
 class TSContainer {
@@ -233,107 +290,6 @@ class TSContainer {
 	std::list<std::shared_ptr<TimeSeries<T>>> tschain;	// time-series chain
 };
 
-//////////////////////////////// add 2540 start
-// template <>
-// class TSContainer<pz003::metrics> {
-//    public:
-// 	TSContainer<pz003::metrics>(){};
-// 	//~TSContainer();
-
-// 	const TimeSeries<pz003::metrics>* getTS(uint8_t id) const;
-
-// 	TimeSeries<pz003::metrics>*		 getTS(uint8_t id) {
-// 		  return const_cast<TimeSeries<pz003::metrics>*>(const_cast<const TSContainer<pz003::metrics>*>(this)->getTS(id));
-// 	};
-
-// 	uint8_t addTS(size_t s, uint32_t start_time, uint32_t period = 1, const char* descr = nullptr, uint8_t id = 0);
-
-// 	void	removeTS(uint8_t id) {
-// 		   tschain.remove_if(MatchID<TimeSeries<pz003::metrics>>(id));
-// 	}
-
-// 	void purge() {
-// 		tschain.clear();
-// 	};
-
-// 	void clear();
-
-// 	void push(const pz003::metrics& val, uint32_t time);
-
-// 	bool setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime);
-
-// 	void setAverager(uint8_t id, std::unique_ptr<AveragingFunction<pz003::metrics>>&& rhs);
-
-// 	int	 getTSsize(uint8_t id) const;
-
-// 	int	 getTSsize() const;
-
-// 	int	 getTScap(uint8_t id) const;
-
-// 	int	 getTScap() const;
-
-// 	int	 getTScnt() const {
-// 		 return tschain.size();
-// 	};
-
-//    protected:
-// 	std::list<std::shared_ptr<TimeSeries<pz003::metrics>>> tschain;	// time-series chain
-// };
-
-////////////////////////////// add 2540 end
-
-//  ===== Implementation follows below =====
-
-template <typename T>
-void TimeSeries<T>::clear(uint32_t t) {
-	tstamp = t;
-	RingBuff<T>::clear();
-	if (_avg) _avg->reset();
-}
-
-template <typename T>
-void TimeSeries<T>::push(const T& val, uint32_t time) {
-	uint32_t _t = time;
-
-	time -= tstamp;	 // разница времени с прошлой выборкой
-
-	// промежуточные выборки либо усредняем либо отбрасываем
-	if (time < interval) {
-		if (_avg) _avg->push(val);
-		return;
-	}
-
-	if (time >= 2 * interval) {							// пропущено несколько выборок
-		if (time / interval > RingBuff<T>::capacity) {	// пропустили выборок больше чем весь текущий буфер - сбрасываем всё
-			clear(_t);
-		} else {
-			// заполняем пропуски последним известным значением, это неверные данные, но других всё равно нет
-			do {
-				RingBuff<T>::push_back(val);
-				time -= interval;
-			} while (time > interval);
-		}
-	}
-
-	// if we have averaging - use it
-	if (_avg && _avg->getCnt()) {
-		_avg->push(val);
-		RingBuff<T>::push_back(_avg->get());
-		_avg->reset();
-		_avg->push(val);
-	} else
-		RingBuff<T>::push_back(val);
-
-	tstamp = _t;  // обновляем метку времени
-}
-
-template <typename T>
-void TimeSeries<T>::setInterval(uint32_t _interval, uint32_t newtime) {
-	if (interval > 0) {
-		interval = _interval;
-		clear(newtime);
-	}
-}
 
 template <typename T>
 const TimeSeries<T>* TSContainer<T>::getTS(uint8_t id) const {
@@ -346,6 +302,7 @@ const TimeSeries<T>* TSContainer<T>::getTS(uint8_t id) const {
 
 	return nullptr;
 }
+
 
 template <typename T>
 uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, const char* descr, uint8_t id) {
@@ -366,8 +323,6 @@ uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, co
 		setAverager(id, std::make_unique<MeanAveragePZ004>());
 	return id;
 }
-
-
 
 template <typename T>
 bool TSContainer<T>::setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime) {
@@ -427,3 +382,55 @@ void TSContainer<T>::setAverager(uint8_t id, std::unique_ptr<AveragingFunction<T
 	auto ts = getTS(id);
 	if (ts) ts->setAverager(std::move(rhs));
 }
+
+
+
+//////////////////////////////// add 2540 start
+
+// template <>
+// class TSContainer<pz003::metrics> {
+//    public:
+// 	TSContainer<pz003::metrics>(){};
+// 	//~TSContainer();
+
+// 	const TimeSeries<pz003::metrics>* getTS(uint8_t id) const;
+
+// 	TimeSeries<pz003::metrics>*		 getTS(uint8_t id) {
+// 		  return const_cast<TimeSeries<pz003::metrics>*>(const_cast<const TSContainer<pz003::metrics>*>(this)->getTS(id));
+// 	};
+
+// 	uint8_t addTS(size_t s, uint32_t start_time, uint32_t period = 1, const char* descr = nullptr, uint8_t id = 0);
+
+// 	void	removeTS(uint8_t id) {
+// 		   tschain.remove_if(MatchID<TimeSeries<pz003::metrics>>(id));
+// 	}
+
+// 	void purge() {
+// 		tschain.clear();
+// 	};
+
+// 	void clear();
+
+// 	void push(const pz003::metrics& val, uint32_t time);
+
+// 	bool setTSinterval(uint8_t id, uint32_t _interval, uint32_t newtime);
+
+// 	void setAverager(uint8_t id, std::unique_ptr<AveragingFunction<pz003::metrics>>&& rhs);
+
+// 	int	 getTSsize(uint8_t id) const;
+
+// 	int	 getTSsize() const;
+
+// 	int	 getTScap(uint8_t id) const;
+
+// 	int	 getTScap() const;
+
+// 	int	 getTScnt() const {
+// 		 return tschain.size();
+// 	};
+
+//    protected:
+// 	std::list<std::shared_ptr<TimeSeries<pz003::metrics>>> tschain;	// time-series chain
+// };
+
+////////////////////////////// add 2540 end
