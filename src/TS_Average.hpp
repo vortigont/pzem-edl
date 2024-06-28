@@ -55,7 +55,7 @@ class MeanAverage : public AveragingFunction<T> {
 };
 
 template <class T>
-void MeanAverage<T>::push(const T& m) override {
+void MeanAverage<T>::push(const T& m){
     
     v += m.voltage;
     c += m.current;
@@ -86,7 +86,7 @@ T MeanAverage<T>::get(){
 }
 
 template <class T>
-void MeanAverage<T>::reset() override {
+void MeanAverage<T>::reset(){
     if (std::is_same<T, pz004::metrics>::value) {
        v = c = p = e = f = pf = _cnt = 0;
     } else {
