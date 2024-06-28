@@ -2,56 +2,43 @@
 
 #include "pzem_modbus.hpp"
 
+
+// 기본 템플릿 클래스 정의
 template <class T>
 class AveragingFunction {
-   public:
-	virtual ~AveragingFunction(){};
+public:
+    virtual ~AveragingFunction() {}
 
-	virtual void   push(const T&) = 0;
-	virtual T	   get()		  = 0;
-	virtual void   reset()		  = 0;
-	virtual size_t getCnt() const = 0;
+    virtual void push(const T&) = 0;
+    virtual T get() = 0;
+    virtual void reset() = 0;
+    virtual size_t getCnt() const = 0;
 };
 
 template <class T>
 class MeanAverage : public AveragingFunction<T> {
-	unsigned v{0}, c{0}, p{0}, e{0}, _cnt{0};
+    unsigned v{0}, c{0}, p{0}, e{0}, _cnt{0};
 
-   public:
-	void		   push(const T& m) override;
-	T                  get() override;
-	void		   reset() override;
-	size_t		   getCnt() const override {
-		return _cnt;
-	};
+public:
+    void push(const T& m) override;
+    T get() override;
+    void reset() override;
+    size_t getCnt() const override {
+        return _cnt;
+    }
 };
 
-
-template <>
-class MeanAverage : public AveragingFunction<pz004::metrics> {
-	unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
-
-   public:
-	void		   push(const pz004::metrics& m) override;
-	pz004::metrics     get() override;
-	void		   reset() override;
-	size_t		   getCnt() const override {
-		return _cnt;
-	};
-};
-
-
+// 템플릿 기본 push 구현
 template <class T>
-void MeanAverage<T>::push(const T& m){
-    
+void MeanAverage<T>::push(const T& m) {
     v += m.voltage;
     c += m.current;
     p += m.power;
     e = m.energy;
-	
     ++_cnt;
 }
 
+// 템플릿 특수화 push 구현
 template <>
 void MeanAverage<pz004::metrics>::push(const pz004::metrics& m) {
     v += m.voltage;
@@ -64,41 +51,39 @@ void MeanAverage<pz004::metrics>::push(const pz004::metrics& m) {
 }
 
 template <class T>
-T MeanAverage<T>::get(){
+T Meatemplate <class T>
+T MeanAverage<T>::get() {
     T _m;
     _m.voltage = v / _cnt;
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-   
     return _m;
 }
 
+// 템플릿 특수화 get 구현
 template <>
-pz004::metrics MeanAverage<pz004::metrics>::get(){
+pz004::metrics MeanAverage<pz004::metrics>::get() {
     pz004::metrics _m;
     _m.voltage = v / _cnt;
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-
     _m.freq = f / _cnt;
     _m.pf = pf / _cnt;
-    
     return _m;
 }
 
 template <class T>
-void MeanAverage<T>::reset(){
-    v = c = p = e = _cnt = 0;    
+void MeanAverage<T>::reset() {
+    v = c = p = e = _cnt = 0;
 }
 
+// 템플릿 특수화 reset 구현
 template <>
-void MeanAverage<pz004::metrics>::reset(){
+void MeanAverage<pz004::metrics>::reset() {
     v = c = p = e = f = pf = _cnt = 0;
 }
-
-
 /*
 namespace pz003 {   
 class MeanAverage : public AveragingFunction<pz003::metrics> {
