@@ -41,7 +41,7 @@ class AveragingFunction {
 	virtual size_t getCnt() const = 0;
 };
 
- 
+template <class T>
 class MeanAverage : public AveragingFunction<T> {
 	unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
 
@@ -54,7 +54,7 @@ class MeanAverage : public AveragingFunction<T> {
 	};
 };
 
-
+template <class T>
 void MeanAverage::push(const T& m) override {
     
     v += m.voltage;
@@ -71,6 +71,7 @@ void MeanAverage::push(const T& m) override {
     ++_cnt;
 }
 
+template <class T>
 T MeanAverage::get(){
     T _m;
     _m.voltage = v / _cnt;
@@ -84,6 +85,7 @@ T MeanAverage::get(){
     return _m;
 }
 
+template <class T>
 void MeanAverage::reset() override {
     if (std::is_same<T, pz004::metrics>::value) {
        v = c = p = e = f = pf = _cnt = 0;
