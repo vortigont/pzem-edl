@@ -17,7 +17,7 @@ public:
 
 template <class T>
 class MeanAverage : public AveragingFunction<T> {
-    unsigned v{0}, c{0}, p{0}, e{0}, _cnt{0};
+    unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
 
 public:
     void push(const T& m) override;
@@ -51,7 +51,6 @@ void MeanAverage<pz004::metrics>::push(const pz004::metrics& m) {
 }
 
 template <class T>
-T Meatemplate <class T>
 T MeanAverage<T>::get() {
     T _m;
     _m.voltage = v / _cnt;
@@ -84,6 +83,10 @@ template <>
 void MeanAverage<pz004::metrics>::reset() {
     v = c = p = e = f = pf = _cnt = 0;
 }
+
+
+
+
 /*
 namespace pz003 {   
 class MeanAverage : public AveragingFunction<pz003::metrics> {
