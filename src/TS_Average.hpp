@@ -2,34 +2,6 @@
 
 #include "pzem_modbus.hpp"
 
-/*
-switch(meters->getState(id)->model) {
-        case pzmodel_t::pzem004v3 : {
-            pz004::rx_msg_prettyp(m);       // parse incoming message and print some nice info
-
-            // or we can access struct data for the updated object (an example)
-            auto *s = (const pz004::state*)meters->getState(id);
-            Serial.printf("===\nPower alarm: %s\n", s->alarm ? "present" : "absent");
-            Serial.printf("Power factor: %d\n", s->data.pf);
-            Serial.printf("Current value: %f\n", s->data.asFloat(meter_t::cur));
-            break;
-        }
-        case pzmodel_t::pzem003 : {
-            pz003::rx_msg_prettyp(m);       // parse incoming message and print some nice info
-
-            // or we can access struct data for the updated object
-            auto *s = (const pz003::state*)meters->getState(id);
-            Serial.printf("===\nPower high alarm: %s\n", s->alarmh ? "present" : "absent");
-            Serial.printf("Power low alarm: %s\n", s->alarml ? "present" : "absent");
-            Serial.printf("Energy: %d\n", s->data.energy);
-            Serial.printf("Current value: %f\n", s->data.asFloat(meter_t::cur));
-            break;
-        }
-        default:
-            break;
-    }
-*/
-
 template <class T>
 class AveragingFunction {
    public:
@@ -54,6 +26,21 @@ class MeanAverage : public AveragingFunction<T> {
 	};
 };
 
+
+template <>
+class MeanAverage : public AveragingFunction<pz004::metrics> {
+	unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
+
+   public:
+	void		   push(const pz004::metrics& m) override;
+	pz004::metrics     get() override;
+	void		   reset() override;
+	size_t		   getCnt() const override {
+		return _cnt;
+	};
+};
+
+
 template <class T>
 void MeanAverage<T>::push(const T& m){
     
@@ -61,14 +48,7 @@ void MeanAverage<T>::push(const T& m){
     c += m.current;
     p += m.power;
     e = m.energy;
-
-   // if (std::is_same<T, int>::value) {
-   //if (std::is_same<T, pz004::metrics>::value) {
-   //if constexpr (std::is_same<T, pz004::metrics>::value) {
-   // pz004::metrics
-   //    f += m.freq;
-   //    pf += m.pf;
-  // }
+	
     ++_cnt;
 }
 
@@ -90,11 +70,7 @@ T MeanAverage<T>::get(){
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-   // if constexpr (std::is_same<T, pz004::metrics>::value) {
-    // if (std::is_same<T, pz004::metrics>::value) {
-    //    _m.freq = f / _cnt;
-    //    _m.pf = pf / _cnt;
-    //}
+   
     return _m;
 }
 
@@ -105,32 +81,21 @@ pz004::metrics MeanAverage<pz004::metrics>::get(){
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-    //if constexpr (std::is_same<T, pz004::metrics>::value) {
-    // if (std::is_same<T, pz004::metrics>::value) {
-	_m.freq = f / _cnt;
-        _m.pf = pf / _cnt;
-    //}
+
+    _m.freq = f / _cnt;
+    _m.pf = pf / _cnt;
+    
     return _m;
 }
 
 template <class T>
 void MeanAverage<T>::reset(){
-    //if constexpr (std::is_same<T, pz004::metrics>::value) {
-    // if (std::is_same<T, pz004::metrics>::value) {
-    //   v = c = p = e = f = pf = _cnt = 0;
-    //} else {
-       v = c = p = e = _cnt = 0;    
-   // }
-//}
+    v = c = p = e = _cnt = 0;    
+}
 
 template <>
 void MeanAverage<pz004::metrics>::reset(){
-    //if constexpr (std::is_same<T, pz004::metrics>::value) {
-    // if (std::is_same<T, pz004::metrics>::value) {
-       v = c = p = e = f = pf = _cnt = 0;
-  //  } else {
-  //     v = c = p = e = _cnt = 0;    
-    //}
+    v = c = p = e = f = pf = _cnt = 0;
 }
 
 
