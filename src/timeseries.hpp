@@ -320,7 +320,7 @@ uint8_t TSContainer<T>::addTS(size_t s, uint32_t start_time, uint32_t period, co
 
 	tschain.emplace_back(std::make_shared<TimeSeries<T>>(id, s, start_time, period, descr));
 	if (period > 1)
-		setAverager(id, std::make_unique<MeanAverage>());
+		setAverager(id, std::make_unique<MeanAverage<T>>());
                 // 2540 mod setAverager(id, std::make_unique<MeanAveragePZ004>());
 	return id;
 }
