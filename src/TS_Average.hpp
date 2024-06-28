@@ -67,7 +67,7 @@ void MeanAverage<T>::push(const T& m){
    // pz004::metrics
        f += m.freq;
        pf += m.pf;
-    )
+   }
     ++_cnt;
 }
 
