@@ -99,7 +99,7 @@ T MeanAverage<T>::get(){
 }
 
 template <>
-T MeanAverage<pz004::metrics>::get(){
+pz004::metrics MeanAverage<pz004::metrics>::get(){
     pz004::metrics _m;
     _m.voltage = v / _cnt;
     _m.current = c / _cnt;
