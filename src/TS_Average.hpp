@@ -63,7 +63,8 @@ void MeanAverage<T>::push(const T& m){
     e = m.energy;
 
    // if (std::is_same<T, int>::value) {
-   if (std::is_same<T, pz004::metrics>::value) {
+   //if (std::is_same<T, pz004::metrics>::value) {
+   if constexpr (std::is_same<T, pz004::metrics>::value) {
    // pz004::metrics
        f += m.freq;
        pf += m.pf;
@@ -78,7 +79,8 @@ T MeanAverage<T>::get(){
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-    if (std::is_same<T, pz004::metrics>::value) {
+    if constexpr (std::is_same<T, pz004::metrics>::value) {
+    // if (std::is_same<T, pz004::metrics>::value) {
         _m.freq = f / _cnt;
         _m.pf = pf / _cnt;
     }
@@ -87,7 +89,8 @@ T MeanAverage<T>::get(){
 
 template <class T>
 void MeanAverage<T>::reset(){
-    if (std::is_same<T, pz004::metrics>::value) {
+    if constexpr (std::is_same<T, pz004::metrics>::value) {
+    // if (std::is_same<T, pz004::metrics>::value) {
        v = c = p = e = f = pf = _cnt = 0;
     } else {
        v = c = p = e = _cnt = 0;    
