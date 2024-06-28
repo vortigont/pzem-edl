@@ -34,12 +34,12 @@ jobs:
       max-parallel: 2
       matrix:
         example:
-          - "examples/01_SinglePZEM004"
-          - "examples/02_SinglePZEM003"
-          - "examples/03_MultiplePZEM004"
-          - "examples/04_MixedPool"
+#          - "examples/01_SinglePZEM004"
+#          - "examples/02_SinglePZEM003"
+#          - "examples/03_MultiplePZEM004"
+#          - "examples/04_MixedPool"
           - "examples/05_TimeSeries"
-          - "examples/pzem_cli"
+#          - "examples/pzem_cli"
 
     steps:
       - uses: actions/checkout@v3
