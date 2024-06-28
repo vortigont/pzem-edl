@@ -64,11 +64,22 @@ void MeanAverage<T>::push(const T& m){
 
    // if (std::is_same<T, int>::value) {
    //if (std::is_same<T, pz004::metrics>::value) {
-   if constexpr (std::is_same<T, pz004::metrics>::value) {
+   //if constexpr (std::is_same<T, pz004::metrics>::value) {
    // pz004::metrics
-       f += m.freq;
-       pf += m.pf;
-   }
+   //    f += m.freq;
+   //    pf += m.pf;
+  // }
+    ++_cnt;
+}
+
+template <>
+void MeanAverage<pz004::metrics>::push(const pz004::metrics& m) {
+    v += m.voltage;
+    c += m.current;
+    p += m.power;
+    e = m.energy;
+    f += m.freq;
+    pf += m.pf;
     ++_cnt;
 }
 
@@ -79,24 +90,48 @@ T MeanAverage<T>::get(){
     _m.current = c / _cnt;
     _m.power = p / _cnt;
     _m.energy = e;
-    if constexpr (std::is_same<T, pz004::metrics>::value) {
+   // if constexpr (std::is_same<T, pz004::metrics>::value) {
     // if (std::is_same<T, pz004::metrics>::value) {
-        _m.freq = f / _cnt;
+    //    _m.freq = f / _cnt;
+    //    _m.pf = pf / _cnt;
+    //}
+    return _m;
+}
+
+template <>
+T MeanAverage<pz004::metrics>::get(){
+    pz004::metrics _m;
+    _m.voltage = v / _cnt;
+    _m.current = c / _cnt;
+    _m.power = p / _cnt;
+    _m.energy = e;
+    //if constexpr (std::is_same<T, pz004::metrics>::value) {
+    // if (std::is_same<T, pz004::metrics>::value) {
+	_m.freq = f / _cnt;
         _m.pf = pf / _cnt;
-    }
+    //}
     return _m;
 }
 
 template <class T>
 void MeanAverage<T>::reset(){
-    if constexpr (std::is_same<T, pz004::metrics>::value) {
+    //if constexpr (std::is_same<T, pz004::metrics>::value) {
+    // if (std::is_same<T, pz004::metrics>::value) {
+    //   v = c = p = e = f = pf = _cnt = 0;
+    //} else {
+       v = c = p = e = _cnt = 0;    
+   // }
+//}
+
+template <>
+void MeanAverage<pz004::metrics>::reset(){
+    //if constexpr (std::is_same<T, pz004::metrics>::value) {
     // if (std::is_same<T, pz004::metrics>::value) {
        v = c = p = e = f = pf = _cnt = 0;
-    } else {
-       v = c = p = e = _cnt = 0;    
-    }
+  //  } else {
+  //     v = c = p = e = _cnt = 0;    
+    //}
 }
-
 
 
 /*
