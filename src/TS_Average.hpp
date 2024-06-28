@@ -15,7 +15,7 @@ class AveragingFunction {
 
 template <class T>
 class MeanAverage : public AveragingFunction<T> {
-	unsigned v{0}, c{0}, p{0}, e{0}, f{0}, pf{0}, _cnt{0};
+	unsigned v{0}, c{0}, p{0}, e{0}, _cnt{0};
 
    public:
 	void		   push(const T& m) override;
