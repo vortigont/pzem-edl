@@ -55,7 +55,7 @@ class MeanAverage : public AveragingFunction<T> {
 };
 
 
-void MeanAverage::push(const T& m){
+void MeanAverage::push(const T& m) override {
     
     v += m.voltage;
     c += m.current;
@@ -84,7 +84,7 @@ T MeanAverage::get(){
     return _m;
 }
 
-void MeanAverage::reset(){
+void MeanAverage::reset() override {
     if (std::is_same<T, pz004::metrics>::value) {
        v = c = p = e = f = pf = _cnt = 0;
     } else {
