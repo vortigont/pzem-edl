@@ -615,6 +615,10 @@ public:
 
     // reset energy counter to some specific value
     void resetEnergyCounter(uint32_t e){ pz.data.energy = e; fm.mt.energy = e; };
+
+    const pzmbus::metrics* getMetrics() const override { return pz.data; }
+    const pz004::metrics*  getMetricsPZ004() const { return pz.data; }
+
 };
 //////////
 class FakeMeterPZ003 {
@@ -696,6 +700,9 @@ public:
 		pz.data.energy = e; 
 		fm.mt.energy = e; 
 	};
+    const pzmbus::metrics* getMetrics() const override { return pz.data; }
+    const pz003::metrics*  getMetricsPZ003() const { return pz.data; }
+
 };
 // #endif // ARDUINO
 
