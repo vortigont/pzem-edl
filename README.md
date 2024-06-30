@@ -3,7 +3,10 @@ PZEM-EDL - PZEM event-driven library
 
 __[BUILD](/docs/BUILD.md) | [EXAMPLES](/examples/README.md) | [CHANGELOG](/CHANGELOG.md) | [DOCS](/docs/README.md) | [LINKS](/docs/LINKS.md)__ | [![PlatformIO CI](https://github.com/vortigont/pzem-edl/actions/workflows/pio_build.yml/badge.svg)](https://github.com/vortigont/pzem-edl/actions/workflows/pio_build.yml)
 
-([https://github.com/hosanglee-kr/pzem-edl/blob/main/docs/pzepzemm-017 pzem-003 rs485 esp32.png](https://github.com/hosanglee-kr/pzem-edl/blob/main/docs/pzem-017 pzem-003 rs485 esp32.png)
+[esp32 rs-485 pzem-017 pzem-003]
+<div align="center">
+  <img src="docs/pzem-017 pzem-003 rs485 esp32.png" width="1000" alt="pzem-017, pzem-003 rs485 esp32.png"/>
+</div>
 
 This is an ESP32 Arduino/esp-idf library implementing communication interface for [PeaceFair](https://peacefair.aliexpress.com/store/1773456) **PZEM-004Tv3.0**/**PZEM-003** Energy monitor modules via MODBUS proto.
 
