@@ -10,6 +10,9 @@
 
         //   cd examples\02_SinglePZEM003
         //  C:\Users\2540\.platformio\penv\Scripts\platformio.exe run -e example -e debug
+
+        //#pio ci -c ${{ matrix.example }}/platformio.ini
+        
         //   platformio run -e example -e debug
         //   #pio ci -c ${{ matrix.example }}/platformio.ini
 
