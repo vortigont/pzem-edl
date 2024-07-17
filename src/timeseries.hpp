@@ -30,7 +30,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include <esp_heap_caps.h>
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#include "esp_psram.h"
+#include <esp_psram.h>
 #elif ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
 #include <esp32/spiram.h>
 #else
@@ -214,7 +214,7 @@ public:
 
 // Unary predicate for ID match
 template <class T>
-class MatchID : public std::unary_function<T, bool>{
+class MatchID {
     uint8_t _id;
 public:
     explicit MatchID(uint8_t id) : _id(id) {}
@@ -284,7 +284,7 @@ template <typename T>
 class TSContainer {
 
 public:
-    TSContainer<T>(){};
+    //TSContainer<T>(){};
     //~TSContainer();
 
     /**
