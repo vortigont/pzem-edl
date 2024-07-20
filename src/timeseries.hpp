@@ -26,15 +26,17 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include <list>
 
 // PSRAM support
+#include "esp_idf_version.h"
 #include <esp_heap_caps.h>
 
-#include "esp_idf_version.h"
-
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
-	#include <esp32/spiram.h>
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    #include "esp_psram.h"
+#elif ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+    #include <esp32/spiram.h>
 #else
-	#include <esp_spiram.h>	 // for older IDF core
+    #include <esp_spiram.h>     // for older IDF core
 #endif
+
 // #include "psalloc.hpp"
 
 #include "pzem_modbus.hpp"
