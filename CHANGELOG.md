@@ -1,5 +1,9 @@
 # Change Log
 
+## v 1.2.0
+* adopt Arduino 3.x core builds
+* remove 3rd party LinkedList lib dependency
+
 ## v 1.1.1 (2023-12-09)
 * update examples with more detailed callback code
 + example on how to create and use TimeSeries data collector
