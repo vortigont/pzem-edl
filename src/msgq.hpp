@@ -345,7 +345,7 @@ private:
             xSemaphoreGive(rts_sem);                // сигналим что можно отправлять следующий пакет и мы готовы ловить ответ
 
             // 'xQueueReceive' will "sleep" untill an event messages arrives from the RX event queue
-            if(xQueueReceive(rx_msg_q, reinterpret_cast<void*>(&event), (portTickType)portMAX_DELAY)) {
+            if(xQueueReceive(rx_msg_q, reinterpret_cast<void*>(&event), portMAX_DELAY)) {
 
                 //Handle received event
                 switch(event.type) {
@@ -426,7 +426,7 @@ private:
         // Task runs inside Infinite loop
         for (;;){
             // 'xQueueReceive' will "sleep" untill some message arrives from the msg queue
-            if(xQueueReceive(tx_msg_q, &(msg), (portTickType)portMAX_DELAY)) {
+            if(xQueueReceive(tx_msg_q, &(msg), portMAX_DELAY)) {
 
                 // if smg would expect a reply than I need to grab a semaphore from the RX queue task
                 if (msg->w4rx){
