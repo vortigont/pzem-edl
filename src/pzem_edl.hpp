@@ -15,7 +15,7 @@ GitHub: https://github.com/vortigont/pzem-edl
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 #include "pzem_modbus.hpp"
-#include "LList.h"
+#include <list>
 
 #define POLLER_PERIOD       PZEM_REFRESH_PERIOD         // auto update period in ms
 #define POLLER_MIN_PERIOD   2*PZEM_UART_TIMEOUT         // minimal poller period
@@ -341,15 +341,14 @@ class PZPool {
     };
 
 protected:
-    LList<std::shared_ptr<PZPort>> ports;                           // list of registered ports
-    LList<std::shared_ptr<PZNode>> meters;                          // list of registered PZEM nodes
+    std::list< std::shared_ptr<PZPort> > ports;                           // list of registered ports
+    std::list< std::shared_ptr<PZNode> > meters;                          // list of registered PZEM nodes                          // list of registered PZEM nodes
     std::shared_ptr<PZPort> port_by_id(uint8_t id);
     const PZEM* pzem_by_id(uint8_t id) const;
 
 
 public:
-    PZPool(){}
-    ~PZPool();
+    PZPool() = default;
     // Copy semantics : not implemented
     PZPool(const PZPool&) = delete;
     PZPool& operator=(const PZPool&) = delete;
