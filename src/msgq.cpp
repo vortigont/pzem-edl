@@ -99,7 +99,7 @@ void UartQ::stop_tx_msg_q(){
 
     // очищаем все сообщения из очереди
     TX_msg* msg = nullptr;
-    while (xQueueReceive(_t, &(msg), (portTickType)0) == pdPASS ){
+    while (xQueueReceive(_t, &(msg), (TickType_t)0) == pdPASS ){
         delete msg;
     }
 
