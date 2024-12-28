@@ -176,7 +176,7 @@ void TimeSeries<T>::setInterval(uint32_t _interval, uint32_t newtime) {
 template <typename T>
 class TSContainer {
    public:
-	TSContainer<T>(){};
+	//TSContainer<T>(){};
 	//~TSContainer();
 
 	/**
