@@ -187,15 +187,6 @@ void PZ003::resetEnergyCounter(){
 
 /*   === PZPool immplementation ===   */
 
-/**
- * @brief Destroy the PZPool::PZPool object
- * All registered devices and ports are destructed
- */
-PZPool::~PZPool(){
-    meters.clear();
-    ports.clear();
-}
-
 bool PZPool::addPort(uint8_t _id, UART_cfg &portcfg, const char *descr){
     if (port_by_id(_id))
         return false;       // port with such id already exist
@@ -208,10 +199,8 @@ bool PZPool::addPort(std::shared_ptr<PZPort> port){
     if (port_by_id(port->id))
         return false;       // port with such id already exist
 
-    if (!ports.add(port))
-        return false;       // some LinkedList error
-
     uint8_t portid = port->id;
+    ports.emplace_back(port);
 
     // RX handler lambda catches port-id here and suppies this id to the handler function
     port->q->attach_RX_hndlr([this, portid](RX_msg *msg){
@@ -282,13 +271,14 @@ bool PZPool::addPZEM(const uint8_t port_id, PZEM *pz){
 
     node->pzem.reset(std::move(pz));
 
-    return meters.add(node);
+    meters.emplace_back(std::move(node));
+    return true;
 }
 
 bool PZPool::removePZEM(const uint8_t pzem_id){
-    for (int i = 0; i != meters.size(); ++i) {
-        if (meters[i]->pzem->id == pzem_id){
-            meters.unlink(i);
+    for (auto i = meters.begin(); i != meters.end(); ++i ){
+        if ((*i)->pzem->id == pzem_id){
+            meters.erase(i);
             return true;
         }
     }
