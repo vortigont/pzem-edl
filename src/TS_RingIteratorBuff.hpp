@@ -219,7 +219,7 @@ void RingBuff<T>::push_back(const T& val) {
 
 // Unary predicate for ID match
 template <class T>
-class MatchID : public std::unary_function<T, bool>{
+class MatchID {
     uint8_t _id;
 public:
     explicit MatchID(uint8_t id) : _id(id) {}
