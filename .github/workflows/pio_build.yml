@@ -42,7 +42,7 @@ jobs:
           - "examples/pzem_cli"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: PIO Cache
         uses: actions/cache@v4
         with:
